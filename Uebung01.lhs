@@ -50,7 +50,7 @@ Auch eine Transformation von Nat nach Int sollte nicht fehlen.
 \begin{code}
 natToInt :: Nat -> Int
 natToInt O = 0
-natToInt (S n) = 1 + ( natToInt n )
+natToInt (S n) = 1 + natToInt n
 \end{code}
 
 %\begin{code}
@@ -150,14 +150,11 @@ Definieren sie die Länge lengthOf einer Liste von Nat wobei das Ergebnis vom
 Typ Nat sein soll.
 
 \begin{code}
-instance Eq Nat where
-  x == y = x `equals` y
-
 lengthOf :: [Nat] -> Nat
 lengthOf list = len list O
 
 len :: [Nat] -> Nat -> Nat
-len list length = if list == []
+len list length = if null list
            then length
            else let t = tail list
                 in len t (S length)
@@ -166,7 +163,7 @@ len list length = if list == []
 
 \begin{code}
 test8 = "lengthOf ([O,O,O,S(S(S(O))),O,S(S(O))] = " ++
-        show ( lengthOf ([O,O,O,S(S(S(O))),O,S(S(O))]))
+        show ( lengthOf [O,O,O,S(S(S O)),O,S(S O)])
 \end{code}
 
 -------------------------------------------------------------------------------
@@ -186,14 +183,14 @@ get list index = get (tail list) (index-1)
 
 \begin{code}
 test9 = "get ([O,O,O,S(S(S(O))),O,S(S(O))]) 3 = " ++
-        show ( get ([O,O,O,S(S(S(O))),O,S(S(O))]) 4)
+        show ( get [O,O,O,S(S(S O)),O,S(S O)] 4)
 \end{code}
 
 -------------------------------------------------------------------------------
 \section{Tests}
 
 \begin{code}
-test = sequence_ (map putStrLn [
+test = mapM_ putStrLn [
         test1,
         test2,
         test3,
@@ -201,6 +198,6 @@ test = sequence_ (map putStrLn [
         test5,
         test6,
         test8,
-        test9])
+        test9]
 \end{code}
 \end{document}
