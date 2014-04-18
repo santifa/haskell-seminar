@@ -53,7 +53,6 @@ natToInt O = 0
 natToInt (S n) = 1 + ( natToInt n )
 \end{code}
 
-% TODO was soll das?
 %\begin{code}
 %showNat :: Nat -> String
 %showNat O = "O"
@@ -122,12 +121,21 @@ test4 = "equals (intToNat 32) (intToNat 32) = " ++
 
 Definieren Sie die Ordnungsrelation lessThen für Nat.
 
-%\begin{code}
+\begin{code}
+lessThen :: Nat -> Nat -> Bool
+lessThen O O = False
+lessThen O _ = True
+lessThen _ O = False
+lessThen (S m) (S n) = lessThen m n
+
+\end{code}
+
+\begin{code}
 test5 = "lessThen (intToNat 8) (intToNat 256) = " ++
         show ( lessThen (intToNat 8) (intToNat 256))
 test6 = "lessThen (intToNat 32) (intToNat 32) = " ++
         show ( lessThen (intToNat 32) (intToNat 32))
-%\end{code}
+\end{code}
 
 -------------------------------------------------------------------------------
 \section{Listen von Nat}
@@ -141,10 +149,26 @@ Wir können damit beispielsweise Listen erzeugen.
 Definieren sie die Länge lengthOf einer Liste von Nat wobei das Ergebnis vom
 Typ Nat sein soll.
 
-%\begin{code}
+\begin{code}
+instance Eq Nat where
+  x == y = x `equals` y
+
+lengthOf :: [Nat] -> Nat
+lengthOf l = len l O
+
+len :: [Nat] -> Nat -> Nat
+len l n = if l == []
+           then n
+           else let h = head l
+                    t = tail l
+                in len t (S n)
+\end{code}
+
+
+\begin{code}
 test8 = "lengthOf ([O,O,O,S(S(S(O))),O,S(S(O))] = " ++
         show ( lengthOf ([O,O,O,S(S(S(O))),O,S(S(O))]))
-%\end{code}
+\end{code}
 
 -------------------------------------------------------------------------------
 \subsection{Elementzugriff bei Listen}
