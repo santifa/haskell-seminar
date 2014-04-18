@@ -154,14 +154,13 @@ instance Eq Nat where
   x == y = x `equals` y
 
 lengthOf :: [Nat] -> Nat
-lengthOf l = len l O
+lengthOf list = len list O
 
 len :: [Nat] -> Nat -> Nat
-len l n = if l == []
-           then n
-           else let h = head l
-                    t = tail l
-                in len t (S n)
+len list length = if list == []
+           then length
+           else let t = tail list
+                in len t (S length)
 \end{code}
 
 
@@ -177,15 +176,23 @@ Definieren Sie eine Funktion get, die das n-te Element aus einer Liste
 von Nat zurückgibt. Der Index soll dabei vom Typ Int sein und das erste
 Listenelement soll den Index 0 haben.
 
-%\begin{code}
+\begin{code}
+get :: [Nat] -> Int -> Nat
+get [] _ = undefined
+get list 1 = head list
+get list index = get (tail list) (index-1)
+
+\end{code}
+
+\begin{code}
 test9 = "get ([O,O,O,S(S(S(O))),O,S(S(O))]) 3 = " ++
-        show ( get ([O,O,O,S(S(S(O))),O,S(S(O))]) 3)
-%\end{code}
+        show ( get ([O,O,O,S(S(S(O))),O,S(S(O))]) 4)
+\end{code}
 
 -------------------------------------------------------------------------------
 \section{Tests}
 
-%\begin{code}
+\begin{code}
 test = sequence_ (map putStrLn [
         test1,
         test2,
@@ -195,5 +202,5 @@ test = sequence_ (map putStrLn [
         test6,
         test8,
         test9])
-%\end{code}
+\end{code}
 \end{document}
