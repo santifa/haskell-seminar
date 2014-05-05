@@ -72,7 +72,8 @@ add m (S n) = add (S m) n
 \end{code}
 
 \begin{code}
-test1 = "add (intToNat 3) (intToNat 4) = " ++ show (add (intToNat 3) (intToNat 4))
+test1 = "add (intToNat 3) (intToNat 4) = " ++
+        show (add (intToNat 3) (intToNat 4))
 \end{code}
 
 -------------------------------------------------------------------------------
@@ -124,8 +125,8 @@ Definieren Sie die Ordnungsrelation lessThen für Nat.
 \begin{code}
 lessThen :: Nat -> Nat -> Bool
 lessThen O O = False
-lessThen O _ = True
 lessThen _ O = False
+lessThen O _ = True
 lessThen (S m) (S n) = lessThen m n
 
 \end{code}
@@ -178,7 +179,6 @@ get :: [Nat] -> Int -> Nat
 get [] _ = undefined
 get list 1 = head list
 get list index = get (tail list) (index-1)
-
 \end{code}
 
 \begin{code}
