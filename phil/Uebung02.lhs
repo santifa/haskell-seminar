@@ -66,7 +66,7 @@ subtract m (O)    = m
 subtract (S m) (S n) = subtract m n 
 
 div :: Nat -> Nat -> Nat
-div _ (O)   = error "keine division durch und so"
+div _ (O)   = error "keine division durch 0 und so"
 div m n 
     | (subtract n m) == (O) && (subtract m n) == (O) = (S O)
     | (subtract m n) == (O) = (O)
@@ -175,6 +175,7 @@ iv)  |scase (f,g) . plus(h,k)  = scase (f.h,g.k)|
 
 \item Ein Datum kann durch ein Tripel (Jahr,Monat,Tag) angegeben werden. Wir definieren das 
       Typsynonym
+
 
 \begin{code}
 type Date = (Int,Int,Int)
