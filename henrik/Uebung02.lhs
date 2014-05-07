@@ -189,11 +189,32 @@ iv)  |scase (f,g) . plus(h,k)  = scase (f.h,g.k)|
 \item  Beweisen Sie iv) unter Benutzung von i)-iii) ( analog zum Beweis von 4) im letzten
        Seminar).(1pt)
 
+scase (f,g) . plus(h,k)
+= { i) && ii) }
+scase(f,g) (. Left . h) (. Right . k)
+= {}
+scase(f.h, g.k)
+
 \item Beweisen Sie |cross(f,g) . cross(h,k) = cross (f.h,g.k)|. (2pt)
+
+cross(f,g) . cross(h,k)
+= {1) und 2) }
+cross(f.fst, g.snd) . cross(h,k)
+= { 3) }
+cross(f.fst.pair(h,k), g.snd.pair(h,k))
+=
+cross (f.h, g.k)
 
 \item Schreiben Sie eine Funktion |testEither :: Either Bool Char -> a| in einen geeigneten
       Typen |a|, die sich auf |Left undefined|, |Right undefined| und |undefined|
       unterschiedlich verhält! (1pt)
+
+Gibt bei Left undefined l | Right undefined r | undefined undefined aus.
+\begin{code}
+testEither :: Either Bool Char -> Char
+testEither (Left _) = 'l'
+testEither (Right _) = 'r'
+\end{code}
 
 \item Ein Datum kann durch ein Tripel (Jahr,Monat,Tag) angegeben werden. Wir definieren das
       Typsynonym
