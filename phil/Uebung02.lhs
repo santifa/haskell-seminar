@@ -11,6 +11,8 @@
 \setcounter{section}{1}
 \section{ Einfache Typen }
 
+% Philip Ullrich 753088
+
 \begin{code}
 module Uebung2 where
 import Prelude hiding (div, subtract)
@@ -58,6 +60,11 @@ intToNatg n
          \item |div (n*m) n = m|
          \end{enumerate}
         Beweisen Sie diese Eigenschaften! (3pt)
+
+          subtract (n+m) n
+        = {def subtract}
+        = subtract m 0
+        = m
 
 \begin{code}
 subtract :: Nat -> Nat -> Nat
