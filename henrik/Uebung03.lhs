@@ -17,7 +17,7 @@
 --
 -- Übungsblatt 3 (Listen)
 -- Abgabe bis: 28.05.2014, 23:59
--- Name:
+-- Name: Henrik Jürges
 -- Erreichte Punkte:      / 14
 ----------------------------------------------------------------------
 \end{verbatim}
@@ -69,35 +69,51 @@ Elementen, die zum Typ |Eq| gehören.
 
 Geben Sie einen Ausdruck |n| an, auf dem sich |last'| und |last''| unterschiedlich
 verhalten. (1 pt)
+-- last' [O, S(O)]
+-- last'' [O, S(O)]
 
 \subsection{Verkettung}
 Beweisen Sie, dass folgende Gleichung gilt: (2 pt)
 
 \textbf{concat (xss ++ yss) = concat xss ++ concat yss}\\
 
-\noindent concat ist dabei als |foldr (++) []| und (++) durch Rekursion über das erste 
-Argument definiert (siehe Prelude). Schreiben Sie diese Definitionen aus und 
-geben Sie den einzelnen Regeln Label, um im Beweis auf sie referenzieren zu können!\\
+\noindent concat ist dabei als |foldr (++) []| und (++) durch Rekursion über das erste
+Argument definiert (siehe Prelude). Schreiben Sie diese Definitionen aus und
+geben Sie den einzelnen Regeln Label, um im Beweis auf sie referenzieren zu können!\
+
+\textbf{concat (xss ++ yss) = concat xss ++ yss}
+\textbf{\label{ = { Def (++)}}}
+\textbf{concat zss = concat xss ++ yss}
+\textbf{\label{ = { Def concat}}}
+\textbf{zs = xs ++ yss}
+\textbf{\label{ = {Def (++) - right side}}}
+\textbf{ Nicht möglich. Einfach Listen und Doppelte Listen haben nicht mehr
+denselben Typ.}
+
 
 \subsection{Halbieren einer Liste}
-Definieren Sie eine Funktion 
+Definieren Sie eine Funktion
 \begin{code}
 splitHalf :: [a] -> (([a],[a]), Maybe a)
-splitHalf = undefined
+splitHalf xs
+  | ((length xs) `mod` 2 == 0) = (splitAt (length xs `div` 2) xs, Nothing)
+  | otherwise = (( take ((length xs) `div` 2) xs, drop (((length xs) `div` 2) + 1 ) xs ), Just (head (drop ((length xs) `div` 2) xs)))
 \end{code}
 
 \noindent die eine Liste ''in der Mitte teilt'': Ist |splitHalf as = ((bs,cs), m)|, so sollen die
-Listen bs und cs gleich lang sein und es soll, falls |m = Just a| ist, |as = bs ++ [a] ++ cs| und 
+Listen bs und cs gleich lang sein und es soll, falls |m = Just a| ist, |as = bs ++ [a] ++ cs| und
 sonst |as = bs ++ cs| gelten. (2 pt)
 
 \subsection{Bedingtes Umkehren einer Liste}
-Definieren Sie eine Funktion 
+Definieren Sie eine Funktion
 \begin{code}
 revEven :: [a] -> [a]
-revEven = undefined
+revEven xs
+  | (_,Nothing) <- splitHalf xs = xs
+  | otherwise = revEven xs
 \end{code}
 
-\noindent die alle Listen gerader Länge umkehrt und alle anderen Listen unverändert lässt. Benutzen 
+\noindent die alle Listen gerader Länge umkehrt und alle anderen Listen unverändert lässt. Benutzen
 Sie |splitHalf| und ''pattern guards'' (siehe \url{http://www.haskell.org/haskellwiki/Pattern_guard}).
 Verwenden Sie weder |where| noch |let|! (2 pt)
 
@@ -107,45 +123,58 @@ Verwenden Sie weder |where| noch |let|! (2 pt)
 
 \begin{enumerate}
  \item Geben Sie den Typen von map map an! (1 pt)
+map map :: [a -> b] -> [[a] -> [b]]
  \item Beweisen Sie, dass folgende Gleichungen gelten:\\
 \textbf{map f (xs ++ ys) = map f xs ++ map f ys} (1 pt)\\
 \textbf{map f . concat = concat . map (map f)} (2 pt)\\
-        
-\noindent Führen Sie den Beweis der zweiten Gleichung, indem Sie unter Benutzung 
-der ersten Gleichung und geeigneter Gesetze zeigen, dass beide Seiten 
+
+\noindent Führen Sie den Beweis der zweiten Gleichung, indem Sie unter Benutzung
+der ersten Gleichung und geeigneter Gesetze zeigen, dass beide Seiten
 sich als dieselbe |foldr|-Instanz schreiben lassen.
 \end{enumerate}
 
 \subsection{Filter (1 pt)}
 
-\noindent Die Prelude-Funktion |filter :: (a -> Bool) -> [a] -> [a]| kann mit Hilfe von 
+\noindent Die Prelude-Funktion |filter :: (a -> Bool) -> [a] -> [a]| kann mit Hilfe von
 concat und map konstruiert werden:
 
 \begin{code}
-filter' = concat . map box
-		where box x = undefined
+filter' p = concat . map box
+                    where box x
+                            | p x = [x]
+                            | otherwise = []
 \end{code}
 
 \noindent Vervollständigen Sie die Definition für |box|. (1 pt)
 
 \section{Folds (3 pt)}
-\noindent Die Funktionen |takeWhile| und |dropWhile| sind den Funktionen take und drop ähnlich. 
+\noindent Die Funktionen |takeWhile| und |dropWhile| sind den Funktionen take und drop ähnlich.
 Statt eines Int-Indexes nehmen sie jedoch einen Boole'schen Ausdruck als
 ersten Parameter. Das Ergebnis von
 
 \textbf{takeWhile p xs}
 
 \noindent
-ist das längste Initial-Segment von |xs|, dessen Elemente sämtlich die Bedingung 
+ist das längste Initial-Segment von |xs|, dessen Elemente sämtlich die Bedingung
 |p| erfüllen. Zum Beispiel ist
 
 \textbf{takeWhile even [2,4,7,4,1,6] = [2,4]}
 
 \begin{enumerate}
 	\item{Definieren Sie |filter p| als Instanz von |foldr| (1 pt)}
+\begin{code}
+filter'' :: (a -> Bool) -> [a] -> [a]
+filter'' p = foldr (\x y -> if p x then x : y else y) []
+\end{code}
 	\item{Definieren Sie |takeWhile| als Instanz von |foldr| (1 pt)}
-	\item{Kann |dropWhile| als Instanz einer Fold-Funktion definiert werden? 
+\begin{code}
+takeWhile' :: (a -> Bool) -> [a] -> [a]
+takeWhile' p = foldr (\x y -> if p x then x : y else y) []
+\end{code}
+\item{Kann |dropWhile| als Instanz einer Fold-Funktion definiert werden?
         Implementieren oder begründen Sie! (1 pt)}
+Dropwhile benötigt das Wissen über den letzten Durchlauf. Foldr kann das
+nicht, also kann es nicht dmit dargestellt werden.
 \end{enumerate}
 
 \section{Hyperoperationen (just for fun)}
@@ -153,8 +182,8 @@ ist das längste Initial-Segment von |xs|, dessen Elemente sämtlich die Bedingu
 \noindent
 Ausgehend von der Beobachtung, dass Multiplikation ''iterierte Addition''
 und Potenzieren ''iteriertes Multiplizieren'' ist, definiert man
-die Folge der \textbf{Hyperoperation} (siehe Wikipedia: \url{http://en.wikipedia.org/wiki/Hyperoperation}). 
-Definieren Sie unter Verwendung von |foldr1| und |foldNat| 
+die Folge der \textbf{Hyperoperation} (siehe Wikipedia: \url{http://en.wikipedia.org/wiki/Hyperoperation}).
+Definieren Sie unter Verwendung von |foldr1| und |foldNat|
 
 \begin{code}
 foldNat :: a -> (a -> a) -> Nat -> a
