@@ -1,20 +1,11 @@
-seite 387
 
 
+data Expr
+    = Var VarName | Con ConName[Expr] | Compose[Expr]
+      deriving(Eq)
 
-
-
-
-
-
-
-
-expression kram
-
-12.2)
-
-
-
+type VarName = Char
+type ConName = String
 
 fst     -> Con "fst" []
 fst.f   -> Compose[Con "fst" [], Var 'f']
@@ -37,15 +28,54 @@ Compose[Var 'f', Var 'g', Var 'h']
 
 
 
+parseExpr :: String -> Expr
+parseExpr = applyParser expr
+
+
+expr :: Parser Expr
+expr = do { xs <- somewith (symbol ".") term; return (compose xs)}
+
+
+term :: Parser Expr
+term = do space
+         c <- letter
+         cs <- many alphanum
+         if null cs
+            then return (Var c)
+            else   do xs <- argument
+                      return (Con (c:cs) xs)
+
+
+
+argument :: Parser [Expr]
+argument = tuple orelse (notuple orelse return [])
+
+
+tuple :: Parser [Expr]
+tuple = do symbol "("
+           xs <- somewith (symbol ",") expr
+           symbol ")"
+           return xs
 
 
 
 
+notuple :: Parser Expr
+notuple = do space
+             c <- letter
+             cs <- many alphanum
+             if null cs
+                then return [Var c]
+                else return [Con(c:cs)[]]
 
-printExpr :: Expr -> String
-printExpr (Var v)   = [v]
 
-printExpr (Con f xs) 
-    | null xs       = f
-    | simple xs     = f # ""
 
+parseEqn :: String -> (Expr, Expr)
+parseEqn = applyParser eqn
+
+eqn :: Parser (Expr, Expr)
+eqn = do space
+         x <- expr
+         symbol "="
+         y <- expr
+         return(x,y)
