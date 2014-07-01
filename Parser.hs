@@ -2,6 +2,7 @@ module Parser (Parser,
                applyParser,
                symbol,
                alphanum,
+               char,
                letter,
                space,
                somewith,
@@ -43,18 +44,21 @@ zero = MkP f where f s = []
 sat :: (Char -> Bool) -> Parser Char
 sat p = do {c <- item; if p c then return c else zero}
 
-letter :: Char -> Parser()
-letter x = do {c <- sat (== x); return ()}
+char :: Char -> Parser()
+char x = do {c <- sat (== x); return ()}
 
 string :: String -> Parser()
 string [] = return ()
-string (x:xs) = do { letter x ; string xs ; return() }
+string (x:xs) = do { char x ; string xs ; return() }
 
 lower :: Parser Char
 lower = sat isLower
 
 alphanum :: Parser Char
 alphanum = sat isAlphaNum
+
+letter :: Parser Char
+letter = sat isAlpha
 
 digit :: Parser Int
 digit = do { d <- sat isDigit; return(ord d - ord '0') }
@@ -83,7 +87,7 @@ wrong :: Parser Int
 wrong = digit `orelse` addition
 
 addition :: Parser Int
-addition = do {m <- digit; letter '+'; n <- digit; return( m + n )}
+addition = do {m <- digit; char '+'; n <- digit; return( m + n )}
 
 
 better :: Parser Int
@@ -100,13 +104,13 @@ nat = do {ds <- some digit; return (foldl1 (l) ds)}
 
 int :: Parser Int
 int = do{f <- op; n <- nat; return(f n)}
-      where op = do {letter '-'; return negate} `orelse` return id
+      where op = do {char '-'; return negate} `orelse` return id
 
 ints :: Parser [Int]
-ints = do letter '['
+ints = do char '['
           n <- int
-          ns <- many(do{letter ','; int})
-          letter ']'
+          ns <- many(do{char ','; int})
+          char ']'
           return (n : ns)
 
 
