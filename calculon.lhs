@@ -140,7 +140,7 @@ Calculater:
 -------------------------------------------------------------------------------
 
 > module Calculon where
-> import Parser
+> import Parser hiding (Con, term, Expr)
 
 Datentypen zu unseren erdachten Funktionen
 - Expression
@@ -218,7 +218,7 @@ Ausgabe für unsere Expressions
 Der Parser für Expressions
 
 > parseExpr :: String -> Expr
-> parseExpr = applayParser expr
+> parseExpr = applyParser expr
 >
 > expr :: Parser Expr
 > expr = do xs <- somewith (symbol ".") term
