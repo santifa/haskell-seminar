@@ -234,7 +234,7 @@ Der Parser für Expressions
 >                     return (Con (c:cs) xs)
 >
 > argument :: Parser [Expr]
-> argument = tuple orelse (notuple orelse return [])
+> argument = tuple `orelse` (notuple `orelse` return [])
 >
 > tuple :: Parser [Expr]
 > tuple = do symbol "("
@@ -242,7 +242,7 @@ Der Parser für Expressions
 >            symbol ")"
 >            return xs
 >
-> notuple :: Parser Expr
+> notuple :: Parser [Expr]
 > notuple = do space
 >              c <- letter
 >              cs <- many alphanum
@@ -252,7 +252,7 @@ Der Parser für Expressions
 
 Der Parser für Gleichungen
 
-> parseEqn :: Parser Expr
+> parseEqn :: String -> (Expr, Expr)
 > parseEqn = applyParser eqn
 >
 > eqn :: Parser (Expr, Expr)
@@ -274,7 +274,7 @@ Der Law Parser
 >          (x, y) <- eqn
 >          return (name, x, y)
 >
-> basicLaw :: String -> Bool
+> basicLaw :: Law -> Bool
 > basicLaw (name, lhs, rhs) = (complexity lhs > complexity rhs)
 
 Die Berechnung
