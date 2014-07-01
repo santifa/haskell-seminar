@@ -1,4 +1,11 @@
-module Parser where 
+module Parser (applyParser,
+               symbol,
+               alphanum,
+               letter,
+               space,
+               somewith,
+               some,
+               sat) where 
 import Data.Char
 
 
@@ -33,12 +40,12 @@ zero = MkP f where f s = []
 sat :: (Char -> Bool) -> Parser Char
 sat p = do {c <- item; if p c then return c else zero}
 
-char :: Char -> Parser()
-char x = do {c <- sat (== x); return ()}
+letter :: Char -> Parser()
+letter x = do {c <- sat (== x); return ()}
 
 string :: String -> Parser()
 string [] = return ()
-string (x:xs) = do { char x ; string xs ; return() }
+string (x:xs) = do { letter x ; string xs ; return() }
 
 lower :: Parser Char
 lower = sat isLower
@@ -73,7 +80,7 @@ wrong :: Parser Int
 wrong = digit `orelse` addition
 
 addition :: Parser Int
-addition = do {m <- digit; char '+'; n <- digit; return( m + n )}
+addition = do {m <- digit; letter '+'; n <- digit; return( m + n )}
 
 
 better :: Parser Int
@@ -90,13 +97,13 @@ nat = do {ds <- some digit; return (foldl1 (l) ds)}
 
 int :: Parser Int
 int = do{f <- op; n <- nat; return(f n)}
-      where op = do {char '-'; return negate} `orelse` return id
+      where op = do {letter '-'; return negate} `orelse` return id
 
 ints :: Parser [Int]
-ints = do char '['
+ints = do letter '['
           n <- int
-          ns <- many(do{char ','; int})
-          char ']'
+          ns <- many(do{letter ','; int})
+          letter ']'
           return (n : ns)
 
 
