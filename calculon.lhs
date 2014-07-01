@@ -11,9 +11,9 @@
 
 Gliederung
 -------------------------------------------------------------------------------
-0) Introduction
-1) Vorüberlegung
-2)
+0) Endlich mal was praktisches
+1) Basics für die gute Küche
+2) Pfannen, Töpfe und Zutaten
 3)
 
 0) Endlich mal was praktisches
@@ -136,10 +136,11 @@ Prover:
 Calculater:
 < calculate :: ([Law], [Law]) -> Expr -> Calculation
 
-2) Pfannen, Töpfe und Zutaten?
+2) Pfannen, Töpfe und Zutaten
 -------------------------------------------------------------------------------
 
 > module Calculon where
+> import Parser
 
 Datentypen zu unseren erdachten Funktionen
 - Expression
@@ -160,8 +161,7 @@ Datentypen zu unseren erdachten Funktionen
 > type Calculation = (Expr, [Step])
 > type Step = (LawName, Expr)
 
-Einige Hilfsfunktionen für Expressions
-
+--------------------------------------------------
 - Komposition von Ausdrücken
 
 > compose :: [Expr] -> Expr
@@ -181,7 +181,9 @@ Einige Hilfsfunktionen für Expressions
 > complexity (Con f xs)   = 1
 > complexity (Compose xs) = length xs
 
-- Ausgabe für unsere Expressions
+--------------------------------------------------
+
+Ausgabe für unsere Expressions
 
 > printExpr :: Expr -> String
 > printExpr (Var v)   = [v]
@@ -192,26 +194,113 @@ Einige Hilfsfunktionen für Expressions
 >                         joinWith ", " (map printExpr xs) ++ ")"
 > printExpr (Compose xs) = joinWith "." (map printExpr xs)
 
+--------------------------------------------------
 
 > simple :: [Expr] -> Bool
 > simple xs = singleton xs && simpleton(head xs)
+
+- joinWith aus Kapitel 5.5 und weitere Hilfsfunktionen
 
 > simpleton :: Expr -> Bool
 > simpleton (Var v)   = True
 > simpleton (Con f xs) = null xs
 > simpleton (Compose xs) = False
-
-- joinWith aus Kapitel 5.5 und weitere Hilfsfunktionen
-
-> joinWith :: a -> [[a]] -> a
-> joinWith x = foldr1 (" ") (xs ++ [x] ++ ys)
-
-> xor :: Bool -> Bool -> Bool
-> xor True a = not a
-> xor False a = a
+>
+> joinWith :: String -> [String] -> String
+> joinWith x = foldr1 (j)
+>   where xs `j` ys = xs ++ x ++ ys
 >
 > singleton :: [a] -> Bool
 > singleton xs = not (null xs) && null (tail xs)
+
+--------------------------------------------------
+
+Der Parser für Expressions
+
+> parseExpr :: String -> Expr
+> parseExpr = applayParser expr
+>
+> expr :: Parser Expr
+> expr = do xs <- somewith (symbol ".") term
+>           return (compose xs)
+>
+> term :: Parser Expr
+> term = do space
+>           c <- letter
+>           cs <- many alphaNum
+>           if null cs
+>              then return (Var c)
+>             else do xs <- argument
+>                     return (Con (c:cs) xs)
+>
+> argument :: Parser [Expr]
+> argument = tuple orelse (notuple orelse return [])
+>
+> tuple :: Parser [Expr]
+> tuple = do symbol "("
+>            xs <- somwith (symbol ",") expr
+>            symbol ")"
+>            return xs
+>
+> notuple :: Parser Expr
+> notuple = do space
+>              c <- letter
+>              cs <- many alphaNum
+>              if null cs
+>                 then return [Var c]
+>                else return [Con (c:cs) []]
+
+Der Parser für Gleichungen
+
+> parseEqn :: Parser Expr
+> parseEqn = applyParser eqn
+>
+> eqn :: Parser (Expr, Expr)
+> eqn = do space
+>          x <- expr
+>          symbol "="
+>          y <- expr
+>          return (x, y)
+
+Der Law Parser
+
+> parseLaw :: String -> Law
+> parseLaw = applayParser law
+>
+> law :: Parser Law
+> law = do space
+>          name <- some (sat (/= ','))
+>          symbol ":"
+>          (x, y) <- eqn
+>          return (name, x, y)
+>
+> basicLaw :: String -> Bool
+> basicLaw (name, lhs, rhs) = (complexity lhs > complexity rhs)
+
+Die Berechnung
+
+> conclusion :: Calculation -> Expr
+> conclusion (x, steps) = if null steps then x else  snd (last steps)
+>
+> paste :: Calculation -> Calculation -> Calculation
+> paste lhc rhc = (fst lhc, snd lhc ++ link x y ++ shuffle rhc)
+>                 where x = conclusion lhc
+>                       y = conclusion rhc
+>
+> link :: Expr -> Expr -> [Step]
+> link x y = if x == y then [] else [("... ??? ...",y)]
+>
+> shuffle :: Calculation -> [Step]
+> shuffle (x, ss) = snd (foldl shunt (x, []) ss)
+>                   where shunt (x, rs) (r, y) = (y, (r,x):rs)
+>
+> printCalc :: Calculation -> String
+> printCalc (x, ss) = "||  " ++ printExpr x ++ "||" ++ concat (map printStep ss)
+>
+> printStep :: Step -> String
+> printStep (why, x) = "=  {" ++ why ++ "} ||  " ++
+>                      printExpr x ++ "||"
+
 
 
 3) Abschmecken
