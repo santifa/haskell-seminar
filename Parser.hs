@@ -1,11 +1,14 @@
-module Parser (applyParser,
+module Parser (Parser,
+               applyParser,
                symbol,
                alphanum,
                letter,
                space,
                somewith,
                some,
-               sat) where 
+               sat,
+               many,
+               orelse) where 
 import Data.Char
 
 

@@ -227,7 +227,7 @@ Der Parser für Expressions
 > term :: Parser Expr
 > term = do space
 >           c <- letter
->           cs <- many alphaNum
+>           cs <- many alphanum
 >           if null cs
 >              then return (Var c)
 >             else do xs <- argument
@@ -238,14 +238,14 @@ Der Parser für Expressions
 >
 > tuple :: Parser [Expr]
 > tuple = do symbol "("
->            xs <- somwith (symbol ",") expr
+>            xs <- somewith (symbol ",") expr
 >            symbol ")"
 >            return xs
 >
 > notuple :: Parser Expr
 > notuple = do space
 >              c <- letter
->              cs <- many alphaNum
+>              cs <- many alphanum
 >              if null cs
 >                 then return [Var c]
 >                else return [Con (c:cs) []]
@@ -265,7 +265,7 @@ Der Parser für Gleichungen
 Der Law Parser
 
 > parseLaw :: String -> Law
-> parseLaw = applayParser law
+> parseLaw = applyParser law
 >
 > law :: Parser Law
 > law = do space
