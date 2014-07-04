@@ -59,21 +59,21 @@ Rekursive Definitionen -> Endlosschleifen
 
 --------------------------------------------------
 
-laws = filters ++ ifs ++others
+let laws = filters ++ ifs ++others
 
-filters
+let filters
    = map parseLaw [
      "definition filter: filter p = concat.map(box p)",
      "definition box:    box p = if(p, wrap, nil)"
    ]
 
-ifs
+let ifs
    = map parseLaw [
      "if over composiition:  if(p,f,g).h = if(p.h, f.h, g.h)",
      "composition over if:   h.if(p,f,g) = if(p, h.f, h.g)"
    ]
 
-others
+let others
    = map ParseLaw [
      "nil constant:      nil.f = nil",
      "nil natural:       map f.nil = nil",
