@@ -161,6 +161,23 @@ Datentypen zu unseren erdachten Funktionen
 > type Calculation = (Expr, [Step])
 > type Step = (LawName, Expr)
 
+
+TODO phils shit simplify + partition
+
+> simplify :: [Law] -> String -> IO ()
+> simplify laws = putStr . printCalc . calculate (basic,others) . parseExpr
+>                 where (basic,others) = partition basicLaw laws
+>
+> partition :: (a -> Bool) -> [a] -> ([a],[a])
+> partition p xs = (filter p xs, filter (not . p) xs)
+>
+> prove :: [Law] -> String -> IO ()
+> prove laws = putStr . printCalc . proveEqn (basic,others) . parseEqn
+>               where (basic,others) = partition basicLaw laws
+>
+> proveEqn :: ([Law],[Law]) -> (Expr, Expr) -> Calculation
+> proveEqn laws (lhs,rhs) = paste (calculate laws lhs) (calculate laws rhs)
+
 --------------------------------------------------
 - Komposition von Ausdrücken
 
@@ -302,6 +319,147 @@ Die Berechnung
 >                      printExpr x ++ "||"
 
 
+
+TODO phils shit kapitel substitution seite 388
+
+>
+> type Subst = [(VarName, Expr)]
+>
+> binding :: Subst -> VarName -> Expr
+> binding [] v          = Var v
+> binding ((u,x):s) v   = if u == v then x else binding s v
+>
+> applySub :: Subst -> Expr -> Expr
+> applySub s (Var v) = binding s v
+> applySub s (Con f xs) = Con f (map (applySub s) xs)
+> applySub s (Compose xs) = compose (map (applySub s) xs)
+>
+> extend :: Subst -> (VarName, Expr) -> [Subst]
+> extend s (v,x)
+>    | y == x = [s]
+>    | y == Var v = [(v,x):s]
+>    | otherwise = []
+>        where y = binding s v
+>
+
+TODO phils shit kapitel matching seite 388
+
+> match :: (Expr, Expr) -> [Subst]
+> match (x,y) = xmatch [] (x,y)
+>
+>
+> 
+> xmatch :: Subst -> (Expr,Expr) -> [Subst]
+> xmatch s (Var v,x)                = extend s (v,x)
+> xmatch s (Con f xs, Var v)        = []
+> xmatch s (Con f xs, Compose ys)   = []
+> xmatch s (Con f xs, Con g ys)     
+>   = if f == g then xmatchlist s (zip xs ys) else []
+> xmatch s (Compose xs, Var v)      = []
+> xmatch s (Compose xs, Con g ys)   = []
+> xmatch s (Compose xs, Compose ys) 
+>   = concat (map (xmatchlist s) (align xs ys)) 
+>
+>
+>
+> xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
+> xmatchlist s []           = [s]
+> xmatchlist s (xy : xys)   = concat [xmatchlist t xys | t <- xmatch s xy] 
+>
+>
+> align :: [Expr] -> [Expr] -> [[(Expr,Expr)]]
+> align xs ys = [zip xs (map compose zs) | zs <- parts (length xs) ys]
+>
+>
+> parts :: Int -> [a] -> [[[a]]]
+> parts 0 []            = [[]]
+> parts 0 (x : xs)      = []
+> parts (n) []          = []
+> parts (n) (x : xs)    = map (new x) (parts n xs) ++ 
+>                         map (glue x) (parts n xs)
+>
+>
+> new :: a -> [[a]] -> [[a]]
+> new x yss = [x] : yss
+>
+>
+> glue :: a -> [[a]] -> [[a]]
+> glue x (ys : yss) = (x : ys) : yss
+>
+>
+
+TODO phils shit kapitel subexpression and rewriting
+
+> type SubExpr = (Location, Expr)
+> data Location = All | Seg Int Int | Pos Int Location
+>
+> subexprs :: Expr -> [SubExpr]
+> subexprs (Var v) = [(All, Var v)]
+> subexprs (Con f xs) = [(All, Con f xs)] ++ subterms xs
+> subexprs (Compose xs) = [(All, Compose xs)] ++ segments xs ++ subterms xs
+>
+>
+> subterms :: [Expr] -> [SubExpr]
+> subterms xs
+>   = [(Pos j loc, y) | j <- [0..n-1], (loc,y) <- subexprs (xs !! j)]
+>       where n = length xs
+>
+> segments :: [Expr] -> [SubExpr]
+> segments xs
+>   = [(Seg j k, Compose (take k (drop j xs))) | k <- [2..n-1], j <- [0..n-1]]
+>       where n = length xs
+>
+> replace :: Expr -> Location -> Expr -> Expr
+> replace x All y = y
+> replace (Con f xs) (Pos j loc) y
+>   = Con f (take j xs ++ [replace (xs !! j) loc y] ++ drop (j+1) xs)
+> replace (Compose xs) (Pos j loc) y
+>   = compose (take j xs ++ [replace (xs !! j) loc y] ++ drop (j+1) xs)
+> replace (Compose xs) (Seg j k) y
+>   = compose (take j xs ++ [y] ++ drop (j+k) xs)
+>
+>
+
+TODO phils shit kapitel Rewriting seite 393
+
+> calculate :: ([Law],[Law]) -> Expr -> Calculation
+> calculate pls x = (x,repeatedly (rewrites pls) x)
+>
+>
+> rewrites :: ([Law], [Law]) -> Expr -> [Step]
+> rewrites (llaws, rlaws) x
+>   = concat ([rewrite law sx x | law <- llaws, sx <- subexprs x]
+>     ++ [rewrite law sx x | sx <- subexprs x, law <- rlaws])
+>
+> rewrite :: Law -> SubExpr -> Expr -> [Step]
+> rewrite (name, lhs, rhs) (loc, y) x 
+>   = [(name, replace x loc (applySub s rhs)) | s <- match (lhs, y)]
+>
+>
+> repeatedly :: (Expr -> [Step]) -> Expr -> [Step]
+> repeatedly rws x
+>   = if null steps then [] else (n,y) : repeatedly rws y
+>       where steps = rws x
+>             (n,y) = head steps
+>
+>
+
+> filters = map parseLaw [
+>      "definition filter: filter p = concat.map(box p)",
+>      "definition box:    box p = if(p, wrap, nil)" ]
+> 
+> ifs = map parseLaw [
+>      "if over composiition:  if(p,f,g).h = if(p.h, f.h, g.h)",
+>      "composition over if:   h.if(p,f,g) = if(p, h.f, h.g)" ]
+> 
+> others = map parseLaw [
+>      "nil constant:      nil.f = nil",
+>      "nil natural:       map f.nil = nil",
+>      "wrap natural:      map f.wrap = wrap.f",
+>      "concat natural:    map f.concat = concat.map(map f)",
+>      "map functor:       map f.map g = map(f.g)" ]
+>
+> laws = filters ++ ifs ++ others
 
 3) Abschmecken
 -------------------------------------------------------------------------------
