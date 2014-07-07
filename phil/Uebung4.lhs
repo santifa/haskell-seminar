@@ -54,6 +54,14 @@ die die Anzahl der Blätter resp. inneren Knoten eines |BTree|s berechnen. ({\bf
 < leafs = ...
 < nodes = ...
 
+> leafs :: Btree a -> Int
+> leafs Empty = 1
+> leafs Branch _ x y = (leafs x) + (leafs y)
+
+> nodes :: BTree a -> Int
+> nodes Empty = 0
+> nodes Branch _ x y = 1 + (leafs x) + (leafs y)
+
 
 \subsection{|leafs bt = nodes bt + 1|}
 
