@@ -485,27 +485,38 @@ Die wichtigste Funktion
 
 
 > exampleExprSimplify = "cross(f, g).pair(h, k)"
+<<<<<<< HEAD
 > sim1 = parseExpr exampleExprSimplify
 > sim2 = parseExpr "pair(f.fst, g.snd).pair(h, k)"
 
+=======
+> exampleLawsSimplify = partition basicLaw pairs
+>
+>
+>
+>
+>>>>>>> 53d39b1adb2487f15910143c5e63fa8ae232add2
 > filters = map parseLaw [
 >      "definition filter: filter p = concat.map(box p)",
->      "definition box:    box p = if(p, wrap, nil)" ]
-
+>      "definition box: box p = if(p, wrap, nil)" ]
+>
 > ifs = map parseLaw [
->      "if over composiition:  if(p,f,g).h = if(p.h, f.h, g.h)",
->      "composition over if:   h.if(p,f,g) = if(p, h.f, h.g)" ]
-
+>      "if over composiition: if(p,f,g).h = if(p.h, f.h, g.h)",
+>      "composition over if: h.if(p,f,g) = if(p, h.f, h.g)" ]
+>
 > others = map parseLaw [
->      "nil constant:      nil.f = nil",
->      "nil natural:       map f.nil = nil",
->      "wrap natural:      map f.wrap = wrap.f",
->      "concat natural:    map f.concat = concat.map(map f)",
->      "map functor:       map f.map g = map(f.g)" ]
-
-> laws = filters ++ ifs ++ others
-
+>      "nil constant: nil.f = nil",
+>      "nil natural: map f.nil = nil",
+>      "wrap natural: map f.wrap = wrap.f",
+>      "concat natural: map f.concat = concat.map(map f)",
+>      "map functor: map f.map g = map(f.g)" ]
+>
+> laws = others ++ filters ++ ifs
+>
 > exampleExprProve = "filter p.map f = map f.filter(p.f)"
+> exampleLawsProve = partition basicLaw laws
+>
+
 
 - joinWith aus Kapitel 5.5 und weitere Hilfsfunktionen
 
