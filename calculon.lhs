@@ -141,7 +141,7 @@ Calculater:
 
 > module Calculon where
 > import Parser
-> import Data.List hiding (partition)
+> import Data.List hiding (partition, union)
 
 Datentypen zu unseren erdachten Funktionen
 --------------------------------------------------
@@ -350,6 +350,10 @@ TODO phils shit kapitel matching seite 388
 > match (Var x,y) = [[(x,y)]]
 > match (Con f xs, Var v) = []
 > match (Con f xs, Compose ys) = []
+> match (Con f xs, Con g ys) = if f == g then matchlist (zip xs ys) else []
+> match (Compose xs, Var v) = []
+> match (Compose xs, Con g ys) = []
+> match (Compose xs, Compose ys) = concat (map matchlist (align xs ys))
 >
 >
 > xmatch :: Subst -> (Expr,Expr) -> [Subst]
@@ -451,22 +455,36 @@ Die wichtigste Funktion
 > unify :: [Subst] -> [Subst]
 > unify [] = [[]]
 > unify (s:ss) = concat [union s t | t <- unify ss]
->
 
- union :: Subst -> Subst -> [Subst]
- union s t = if compatible s t then [merge' s t] else []
+
+> union :: Subst -> Subst -> [Subst]
+> union s t = if compatible s t then [merge' s t] else []
+>
+> compatible :: Subst -> Subst -> Bool
+> compatible [] [] = True
+> compatible [] xs = False
+> compatible xs [] = False
+> compatible ((v, e):xs) ((vv, ee):ys) = if v /= vv
+>                                    then False
+>                                    else
+>                                      if e /= ee
+>                                      then False
+>                                      else compatible xs ys
+>
 
 
 > cplist :: [[a]] -> [[a]]
 > cplist [] = [[]]
 > cplist (xs:xss) = [y:ys| y <- xs, ys <- cplist xss]
 >
-> merge' = nub . merge
+> merge' s t = nub $ merge s t
 >
 > merge :: [a] -> [a] -> [a]
 > merge xs [] = xs
 > merge [] ys = ys
 > merge (x:xs) (y:ys) = x:y:(merge xs ys)
+>
+
 
 4) Genießen
 -------------------------------------------------------------------------------
@@ -485,17 +503,10 @@ Die wichtigste Funktion
 
 
 > exampleExprSimplify = "cross(f, g).pair(h, k)"
-<<<<<<< HEAD
 > sim1 = parseExpr exampleExprSimplify
 > sim2 = parseExpr "pair(f.fst, g.snd).pair(h, k)"
-
-=======
 > exampleLawsSimplify = partition basicLaw pairs
->
->
->
->
->>>>>>> 53d39b1adb2487f15910143c5e63fa8ae232add2
+
 > filters = map parseLaw [
 >      "definition filter: filter p = concat.map(box p)",
 >      "definition box: box p = if(p, wrap, nil)" ]
