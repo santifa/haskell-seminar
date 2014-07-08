@@ -140,9 +140,11 @@ Calculater:
 -------------------------------------------------------------------------------
 
 > module Calculon where
-> import Parser hiding (Con, term, Expr)
+> import Parser
 
 Datentypen zu unseren erdachten Funktionen
+--------------------------------------------------
+
 - Expression
 
 > data Expr = Var VarName | Con ConName[Expr] | Compose[Expr]
@@ -162,25 +164,8 @@ Datentypen zu unseren erdachten Funktionen
 > type Calculation = (Expr, [Step])
 > type Step = (LawName, Expr)
 
-
-TODO phils shit simplify + partition
-
-> simplify :: [Law] -> String -> IO ()
-> simplify laws = putStr . printCalc . calculate (basic,others) . parseExpr
->                 where (basic,others) = partition basicLaw laws
->
-> partition :: (a -> Bool) -> [a] -> ([a],[a])
-> partition p xs = (filter p xs, filter (not . p) xs)
->
-> prove :: [Law] -> String -> IO ()
-> prove laws = putStr . printCalc . proveEqn (basic,others) . parseEqn
->               where (basic,others) = partition basicLaw laws
->
-> proveEqn :: ([Law],[Law]) -> (Expr, Expr) -> Calculation
-> proveEqn laws (lhs,rhs) = paste (calculate laws lhs) (calculate laws rhs)
-
+Komposition von Ausdrücken
 --------------------------------------------------
-- Komposition von Ausdrücken
 
 > compose :: [Expr] -> Expr
 > compose xs  = if singleton xs
@@ -192,16 +177,16 @@ TODO phils shit simplify + partition
 > decompose(Con f xs)     = [Con f xs]
 > decompose(Compose xs)   = xs
 
-- Komplexität von Ausdrücken
+Komplexität von Ausdrücken
+--------------------------------------------------
 
 > complexity :: Expr -> Int
 > complexity (Var v)      = 1
 > complexity (Con f xs)   = 1
 > complexity (Compose xs) = length xs
 
---------------------------------------------------
-
 Ausgabe für unsere Expressions
+--------------------------------------------------
 
 > printExpr :: Expr -> String
 > printExpr (Var v)   = [v]
@@ -212,14 +197,9 @@ Ausgabe für unsere Expressions
 >                         joinWith ", " (map printExpr xs) ++ ")"
 > printExpr (Compose xs) = joinWith "." (map printExpr xs)
 
---------------------------------------------------
-
-> simple :: [Expr] -> Bool
-> simple xs = singleton xs && simpleton(head xs)
-
---------------------------------------------------
 
 Der Parser für Expressions
+--------------------------------------------------
 
 > parseExpr :: String -> Expr
 > parseExpr = applyParser expr
@@ -255,6 +235,7 @@ Der Parser für Expressions
 >                else return [Con (c:cs) []]
 
 Der Parser für Gleichungen
+--------------------------------------------------
 
 > parseEqn :: String -> (Expr, Expr)
 > parseEqn = applyParser eqn
@@ -267,6 +248,7 @@ Der Parser für Gleichungen
 >          return (x, y)
 
 Der Law Parser
+--------------------------------------------------
 
 > parseLaw :: String -> Law
 > parseLaw = applyParser law
@@ -282,6 +264,7 @@ Der Law Parser
 > basicLaw (name, lhs, rhs) = (complexity lhs > complexity rhs)
 
 Die Berechnung
+--------------------------------------------------
 
 > conclusion :: Calculation -> Expr
 > conclusion (x, steps) = if null steps then x else  snd (last steps)
@@ -295,15 +278,32 @@ Die Berechnung
 > link x y = if x == y then [] else [("... ??? ...",y)]
 >
 > shuffle :: Calculation -> [Step]
-> shuffle (x, ss) = snd (foldl shunt (x, []) ss)
->                   where shunt (x, rs) (r, y) = (y, (r,x):rs)
+> shuffle (expr, stepList) = snd (foldl shunt (expr, []) stepList)
+>                   where shunt (stepList, rs) (r, y) = (y, (r, expr):rs)
 >
 > printCalc :: Calculation -> String
-> printCalc (x, ss) = "||  " ++ printExpr x ++ "\n||" ++ concat (map printStep ss)
+> printCalc (x, ss) = "||  " ++ printExpr x ++ "\n||" ++ concat (map printStep ss) ++ "\n"
 >
 > printStep :: Step -> String
 > printStep (why, x) = "=  {" ++ why ++ "} \n||  " ++
 >                      printExpr x ++ "\n||"
+
+Unsere vorher erdachten Funktionen
+--------------------------------------------------
+
+> simplify :: [Law] -> String -> IO ()
+> simplify laws = putStr . printCalc . calculate (basic,others) . parseExpr
+>                 where (basic,others) = partition basicLaw laws
+>
+> partition :: (a -> Bool) -> [a] -> ([a],[a])
+> partition p xs = (filter p xs, filter (not . p) xs)
+>
+> prove :: [Law] -> String -> IO ()
+> prove laws = putStr . printCalc . proveEqn (basic,others) . parseEqn
+>               where (basic,others) = partition basicLaw laws
+>
+> proveEqn :: ([Law],[Law]) -> (Expr, Expr) -> Calculation
+> proveEqn laws (lhs,rhs) = paste (calculate laws lhs) (calculate laws rhs)
 
 
 3) Abschmecken
@@ -390,7 +390,7 @@ TODO phils shit kapitel subexpression and rewriting
 >
 >
 > subterms :: [Expr] -> [SubExpr]
->± subterms xs
+> subterms xs
 >   = [(Pos j loc, y) | j <- [0..n-1], (loc,y) <- subexprs (xs !! j)]
 >       where n = length xs
 >
@@ -442,47 +442,66 @@ TODO phils shit kapitel Rewriting seite 393
 5) hilsfunktion und constanten
 -------------------------------------------------------------------------------
 
->
+
 > pairs = map parseLaw [
 >       "definition fst: fst.pair(f, g) = f",
 >       "definition snd: snd.pair(f, g) = g",
 >       "definition cross: cross(f,g) = pair(f.fst, g.snd)",
 >       "pair absorption: pair(f, g).h = pair(f.h, g.h)" ]
->
->
+
+
 > exampleExprSimplify = "cross(f, g).pair(h, k)"
->
->
->
+
+
 > filters = map parseLaw [
 >      "definition filter: filter p = concat.map(box p)",
 >      "definition box:    box p = if(p, wrap, nil)" ]
->
+
 > ifs = map parseLaw [
 >      "if over composiition:  if(p,f,g).h = if(p.h, f.h, g.h)",
 >      "composition over if:   h.if(p,f,g) = if(p, h.f, h.g)" ]
->
+
 > others = map parseLaw [
 >      "nil constant:      nil.f = nil",
 >      "nil natural:       map f.nil = nil",
 >      "wrap natural:      map f.wrap = wrap.f",
 >      "concat natural:    map f.concat = concat.map(map f)",
 >      "map functor:       map f.map g = map(f.g)" ]
->
+
 > laws = filters ++ ifs ++ others
->
+
 > exampleExprProve = "filter p.map f = map f.filter(p.f)"
 
 - joinWith aus Kapitel 5.5 und weitere Hilfsfunktionen
+
+> simple :: [Expr] -> Bool
+> simple xs = singleton xs && simpleton(head xs)
+
+- liste ist nicht leer
+
+> singleton :: [a] -> Bool
+> singleton xs = not (null xs) && null (tail xs)
+
+- gibt zurück ob regel einfach oder nicht
 
 > simpleton :: Expr -> Bool
 > simpleton (Var v)   = True
 > simpleton (Con f xs) = null xs
 > simpleton (Compose xs) = False
->
+
 > joinWith :: String -> [String] -> String
 > joinWith x = foldr1 (j)
 >   where xs `j` ys = xs ++ x ++ ys
->
-> singleton :: [a] -> Bool
-> singleton xs = not (null xs) && null (tail xs)
+
+Testesser
+--------------------------------------------------
+
+> printLaw xs = mapM_ putStrLn zs
+>   where zs = map (\(x, y, z) ->
+>                    x ++ ":\t" ++  printExpr y ++ " :=: " ++ printExpr z) xs
+
+> printList xs = mapM_ putStrLn xs
+
+> test1 =  printLaw pairs
+> test2 = putStr . printCalc . calculate (partition basicLaw pairs) . parseExpr
+> test3 = putStr . printCalc . calculate (partition basicLaw laws) . parseExpr
