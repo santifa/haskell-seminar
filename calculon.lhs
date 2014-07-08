@@ -312,11 +312,11 @@ Die Berechnung
 >                   where shunt (x, rs) (r, y) = (y, (r,x):rs)
 >
 > printCalc :: Calculation -> String
-> printCalc (x, ss) = "||  " ++ printExpr x ++ "||" ++ concat (map printStep ss)
+> printCalc (x, ss) = "||  " ++ printExpr x ++ "\n||" ++ concat (map printStep ss)
 >
 > printStep :: Step -> String
-> printStep (why, x) = "=  {" ++ why ++ "} ||  " ++
->                      printExpr x ++ "||"
+> printStep (why, x) = "=  {" ++ why ++ "} \n||  " ++
+>                      printExpr x ++ "\n||"
 
 
 
@@ -457,10 +457,11 @@ TODO phils shit kapitel Rewriting seite 393
 
 > 
 > pairs = map parseLaw [
->   "definition fst: fst:pair(f, g) = f",
->   "definition snd: snd.pair(f, g) = g",
->   "definition cross: cross(f,g) = pair(f.fst, g.snd)",
->   "pair absorption: pair(f, g).h = pair(f.h, g.h)"]
+>       "definition fst: fst.pair(f, g) = f",
+>       "definition snd: snd.pair(f, g) = g",
+>       "definition cross: cross(f,g) = pair(f.fst, g.snd)",
+>       "pair absorption: pair(f, g).h = pair(f.h, g.h)" ]
+>
 >
 > exampleExprSimplify = "cross(f, g).pair(h, k)"
 >
