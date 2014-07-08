@@ -145,7 +145,7 @@ Calculater:
 Datentypen zu unseren erdachten Funktionen
 - Expression
 
-> data Expr = Var VarName | Con ConName[Expr] | Compose[Expr] deriving (Eq)
+> data Expr = Var VarName | Con ConName[Expr] | Compose[Expr] deriving (Eq, Show)
 > type VarName = Char
 > type ConName = String
 
@@ -286,7 +286,7 @@ Der Law Parser
 >
 > law :: Parser Law
 > law = do space
->          name <- some (sat (/= ','))
+>          name <- some (sat (/= ':'))
 >          symbol ":"
 >          (x, y) <- eqn
 >          return (name, x, y)
@@ -391,7 +391,7 @@ TODO phils shit kapitel matching seite 388
 TODO phils shit kapitel subexpression and rewriting
 
 > type SubExpr = (Location, Expr)
-> data Location = All | Seg Int Int | Pos Int Location
+> data Location = All | Seg Int Int | Pos Int Location deriving (Show)
 >
 > subexprs :: Expr -> [SubExpr]
 > subexprs (Var v) = [(All, Var v)]
@@ -444,6 +444,28 @@ TODO phils shit kapitel Rewriting seite 393
 >
 >
 
+3) Abschmecken
+-------------------------------------------------------------------------------
+
+4) Genießen
+-------------------------------------------------------------------------------
+
+
+
+5) hilsfunktion und constanten
+-------------------------------------------------------------------------------
+
+> 
+> pairs = map parseLaw [
+>   "definition fst: fst:pair(f, g) = f",
+>   "definition snd: snd.pair(f, g) = g",
+>   "definition cross: cross(f,g) = pair(f.fst, g.snd)",
+>   "pair absorption: pair(f, g).h = pair(f.h, g.h)"]
+>
+> exampleExprSimplify = "cross(f, g).pair(h, k)"
+>
+>
+>
 > filters = map parseLaw [
 >      "definition filter: filter p = concat.map(box p)",
 >      "definition box:    box p = if(p, wrap, nil)" ]
@@ -460,9 +482,7 @@ TODO phils shit kapitel Rewriting seite 393
 >      "map functor:       map f.map g = map(f.g)" ]
 >
 > laws = filters ++ ifs ++ others
+>
+> exampleExprProve = "filter p.map f = map f.filter(p.f)"
 
-3) Abschmecken
--------------------------------------------------------------------------------
 
-4) Genießen
--------------------------------------------------------------------------------

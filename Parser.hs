@@ -1,4 +1,5 @@
 module Parser (Parser,
+               apply,
                applyParser,
                symbol,
                alphanum,
@@ -138,8 +139,8 @@ symbol xs = token(string xs)
 
 
 
-data Expr = Con Int | Bin Op Expr Expr
-data Op = Plus | Minus
+data Expr = Con Int | Bin Op Expr Expr deriving (Show)
+data Op = Plus | Minus deriving (Show)
 
 
 expr :: Parser Expr
