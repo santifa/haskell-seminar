@@ -141,6 +141,7 @@ Calculater:
 
 > module Calculon where
 > import Parser
+> import Data.List hiding (partition)
 
 Datentypen zu unseren erdachten Funktionen
 --------------------------------------------------
@@ -282,7 +283,8 @@ Die Berechnung
 >                   where shunt (stepList, rs) (r, y) = (y, (r, expr):rs)
 >
 > printCalc :: Calculation -> String
-> printCalc (x, ss) = "||  " ++ printExpr x ++ "\n||" ++ concat (map printStep ss) ++ "\n"
+> printCalc (x, ss) = "||  " ++ printExpr x ++ "\n||" ++
+>                     concat (map printStep ss) ++ "\n"
 >
 > printStep :: Step -> String
 > printStep (why, x) = "=  {" ++ why ++ "} \n||  " ++
@@ -309,21 +311,31 @@ Unsere vorher erdachten Funktionen
 3) Abschmecken
 -------------------------------------------------------------------------------
 
+Unsere Substition
 
-TODO phils shit kapitel substitution seite 388
-
->
 > type Subst = [(VarName, Expr)]
->
+
+Teilausdrücke und ihr Ort
+
+> type SubExpr = (Location, Expr)
+> data Location = All | Seg Int Int | Pos Int Location deriving (Show, Eq)
+
+Binding gibt einen Ausdruck zurück der mit einer Variable substituiert
+wird. Leere Liste ist Identität
+
 > binding :: Subst -> VarName -> Expr
 > binding [] v          = Var v
 > binding ((u,x):s) v   = if u == v then x else binding s v
->
+
+Substitution an Ausdruck binden.
+
 > applySub :: Subst -> Expr -> Expr
 > applySub s (Var v) = binding s v
 > applySub s (Con f xs) = Con f (map (applySub s) xs)
 > applySub s (Compose xs) = compose (map (applySub s) xs)
->
+
+
+
 > extend :: Subst -> (VarName, Expr) -> [Subst]
 > extend s (v,x)
 >    | y == x = [s]
@@ -335,8 +347,9 @@ TODO phils shit kapitel substitution seite 388
 TODO phils shit kapitel matching seite 388
 
 > match :: (Expr, Expr) -> [Subst]
-> match (x,y) = xmatch [] (x,y)
->
+> match (Var x,y) = [[(x,y)]]
+> match (Con f xs, Var v) = []
+> match (Con f xs, Compose ys) = []
 >
 >
 > xmatch :: Subst -> (Expr,Expr) -> [Subst]
@@ -352,6 +365,9 @@ TODO phils shit kapitel matching seite 388
 >
 >
 >
+> matchlist :: [(Expr, Expr)] -> [Subst]
+> matchlist = concat . map unify . cplist . map match
+
 > xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
 > xmatchlist s []           = [s]
 > xmatchlist s (xy : xys)   = concat [xmatchlist t xys | t <- xmatch s xy]
@@ -380,8 +396,6 @@ TODO phils shit kapitel matching seite 388
 
 TODO phils shit kapitel subexpression and rewriting
 
-> type SubExpr = (Location, Expr)
-> data Location = All | Seg Int Int | Pos Int Location deriving (Show)
 >
 > subexprs :: Expr -> [SubExpr]
 > subexprs (Var v) = [(All, Var v)]
@@ -410,7 +424,7 @@ TODO phils shit kapitel subexpression and rewriting
 >
 >
 
-TODO phils shit kapitel Rewriting seite 393
+Die wichtigste Funktion
 
 > calculate :: ([Law],[Law]) -> Expr -> Calculation
 > calculate pls x = (x,repeatedly (rewrites pls) x)
@@ -434,6 +448,26 @@ TODO phils shit kapitel Rewriting seite 393
 >
 >
 
+> unify :: [Subst] -> [Subst]
+> unify [] = [[]]
+> unify (s:ss) = concat [union s t | t <- unify ss]
+>
+
+ union :: Subst -> Subst -> [Subst]
+ union s t = if compatible s t then [merge' s t] else []
+
+
+> cplist :: [[a]] -> [[a]]
+> cplist [] = [[]]
+> cplist (xs:xss) = [y:ys| y <- xs, ys <- cplist xss]
+>
+> merge' = nub . merge
+>
+> merge :: [a] -> [a] -> [a]
+> merge xs [] = xs
+> merge [] ys = ys
+> merge (x:xs) (y:ys) = x:y:(merge xs ys)
+
 4) Genießen
 -------------------------------------------------------------------------------
 
@@ -451,7 +485,8 @@ TODO phils shit kapitel Rewriting seite 393
 
 
 > exampleExprSimplify = "cross(f, g).pair(h, k)"
-
+> sim1 = parseExpr exampleExprSimplify
+> sim2 = parseExpr "pair(f.fst, g.snd).pair(h, k)"
 
 > filters = map parseLaw [
 >      "definition filter: filter p = concat.map(box p)",
@@ -501,7 +536,8 @@ Testesser
 >                    x ++ ":\t" ++  printExpr y ++ " :=: " ++ printExpr z) xs
 
 > printList xs = mapM_ putStrLn xs
+> testLaw = printLaw pairs
+>
 
-> test1 =  printLaw pairs
 > test2 = putStr . printCalc . calculate (partition basicLaw pairs) . parseExpr
 > test3 = putStr . printCalc . calculate (partition basicLaw laws) . parseExpr
