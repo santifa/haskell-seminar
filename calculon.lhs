@@ -140,7 +140,7 @@ Calculater:
 -------------------------------------------------------------------------------
 
 > module Calculon where
-> import Parser hiding (Con, term, Expr)
+> import Parser 
 
 Datentypen zu unseren erdachten Funktionen
 - Expression
@@ -390,7 +390,7 @@ TODO phils shit kapitel subexpression and rewriting
 >
 >
 > subterms :: [Expr] -> [SubExpr]
->± subterms xs
+> subterms xs
 >   = [(Pos j loc, y) | j <- [0..n-1], (loc,y) <- subexprs (xs !! j)]
 >       where n = length xs
 >
