@@ -145,7 +145,8 @@ Calculater:
 Datentypen zu unseren erdachten Funktionen
 - Expression
 
-> data Expr = Var VarName | Con ConName[Expr] | Compose[Expr] deriving (Eq, Show)
+> data Expr = Var VarName | Con ConName[Expr] | Compose[Expr]
+>           deriving (Eq, Show)
 > type VarName = Char
 > type ConName = String
 
@@ -215,20 +216,6 @@ Ausgabe für unsere Expressions
 
 > simple :: [Expr] -> Bool
 > simple xs = singleton xs && simpleton(head xs)
-
-- joinWith aus Kapitel 5.5 und weitere Hilfsfunktionen
-
-> simpleton :: Expr -> Bool
-> simpleton (Var v)   = True
-> simpleton (Con f xs) = null xs
-> simpleton (Compose xs) = False
->
-> joinWith :: String -> [String] -> String
-> joinWith x = foldr1 (j)
->   where xs `j` ys = xs ++ x ++ ys
->
-> singleton :: [a] -> Bool
-> singleton xs = not (null xs) && null (tail xs)
 
 --------------------------------------------------
 
@@ -319,6 +306,9 @@ Die Berechnung
 >                      printExpr x ++ "\n||"
 
 
+3) Abschmecken
+-------------------------------------------------------------------------------
+
 
 TODO phils shit kapitel substitution seite 388
 
@@ -348,23 +338,23 @@ TODO phils shit kapitel matching seite 388
 > match (x,y) = xmatch [] (x,y)
 >
 >
-> 
+>
 > xmatch :: Subst -> (Expr,Expr) -> [Subst]
 > xmatch s (Var v,x)                = extend s (v,x)
 > xmatch s (Con f xs, Var v)        = []
 > xmatch s (Con f xs, Compose ys)   = []
-> xmatch s (Con f xs, Con g ys)     
+> xmatch s (Con f xs, Con g ys)
 >   = if f == g then xmatchlist s (zip xs ys) else []
 > xmatch s (Compose xs, Var v)      = []
 > xmatch s (Compose xs, Con g ys)   = []
-> xmatch s (Compose xs, Compose ys) 
->   = concat (map (xmatchlist s) (align xs ys)) 
+> xmatch s (Compose xs, Compose ys)
+>   = concat (map (xmatchlist s) (align xs ys))
 >
 >
 >
 > xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
 > xmatchlist s []           = [s]
-> xmatchlist s (xy : xys)   = concat [xmatchlist t xys | t <- xmatch s xy] 
+> xmatchlist s (xy : xys)   = concat [xmatchlist t xys | t <- xmatch s xy]
 >
 >
 > align :: [Expr] -> [Expr] -> [[(Expr,Expr)]]
@@ -375,7 +365,7 @@ TODO phils shit kapitel matching seite 388
 > parts 0 []            = [[]]
 > parts 0 (x : xs)      = []
 > parts (n) []          = []
-> parts (n) (x : xs)    = map (new x) (parts n xs) ++ 
+> parts (n) (x : xs)    = map (new x) (parts n xs) ++
 >                         map (glue x) (parts n xs)
 >
 >
@@ -400,7 +390,7 @@ TODO phils shit kapitel subexpression and rewriting
 >
 >
 > subterms :: [Expr] -> [SubExpr]
-> subterms xs
+>± subterms xs
 >   = [(Pos j loc, y) | j <- [0..n-1], (loc,y) <- subexprs (xs !! j)]
 >       where n = length xs
 >
@@ -432,7 +422,7 @@ TODO phils shit kapitel Rewriting seite 393
 >     ++ [rewrite law sx x | sx <- subexprs x, law <- rlaws])
 >
 > rewrite :: Law -> SubExpr -> Expr -> [Step]
-> rewrite (name, lhs, rhs) (loc, y) x 
+> rewrite (name, lhs, rhs) (loc, y) x
 >   = [(name, replace x loc (applySub s rhs)) | s <- match (lhs, y)]
 >
 >
@@ -444,9 +434,6 @@ TODO phils shit kapitel Rewriting seite 393
 >
 >
 
-3) Abschmecken
--------------------------------------------------------------------------------
-
 4) Genießen
 -------------------------------------------------------------------------------
 
@@ -455,7 +442,7 @@ TODO phils shit kapitel Rewriting seite 393
 5) hilsfunktion und constanten
 -------------------------------------------------------------------------------
 
-> 
+>
 > pairs = map parseLaw [
 >       "definition fst: fst.pair(f, g) = f",
 >       "definition snd: snd.pair(f, g) = g",
@@ -470,11 +457,11 @@ TODO phils shit kapitel Rewriting seite 393
 > filters = map parseLaw [
 >      "definition filter: filter p = concat.map(box p)",
 >      "definition box:    box p = if(p, wrap, nil)" ]
-> 
+>
 > ifs = map parseLaw [
 >      "if over composiition:  if(p,f,g).h = if(p.h, f.h, g.h)",
 >      "composition over if:   h.if(p,f,g) = if(p, h.f, h.g)" ]
-> 
+>
 > others = map parseLaw [
 >      "nil constant:      nil.f = nil",
 >      "nil natural:       map f.nil = nil",
@@ -486,4 +473,16 @@ TODO phils shit kapitel Rewriting seite 393
 >
 > exampleExprProve = "filter p.map f = map f.filter(p.f)"
 
+- joinWith aus Kapitel 5.5 und weitere Hilfsfunktionen
 
+> simpleton :: Expr -> Bool
+> simpleton (Var v)   = True
+> simpleton (Con f xs) = null xs
+> simpleton (Compose xs) = False
+>
+> joinWith :: String -> [String] -> String
+> joinWith x = foldr1 (j)
+>   where xs `j` ys = xs ++ x ++ ys
+>
+> singleton :: [a] -> Bool
+> singleton xs = not (null xs) && null (tail xs)
