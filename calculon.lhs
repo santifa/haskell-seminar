@@ -157,20 +157,21 @@ Datentypen zu unseren erdachten Funktionen
 - Expression
 
 > data Expr = Var VarName | Con ConName[Expr] | Compose[Expr]
->           deriving (Eq, Ord, Show)
 
-<           deriving (Eq, Ord)
+< >           deriving (Eq, Ord, Show)
+
+>           deriving (Eq, Ord)
 
 > type VarName = Char
 > type ConName = String
 >
 
- instance Show Expr where
-    show (Var name) = [name]
-    show (Con name []) = name
-    show (Con name (x:[])) = name ++ " " ++ show x
-    show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
-    show (Compose xs) = toStr xs "."
+> instance Show Expr where
+>    show (Var name) = [name]
+>    show (Con name []) = name
+>    show (Con name (x:[])) = name ++ " " ++ show x
+>    show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
+>    show (Compose xs) = toStr xs "."
 
 > toStr [] _ = ""
 > toStr (x:[]) _ = show x
@@ -292,7 +293,7 @@ Die Berechnung
 >
 > shuffle :: Calculation -> [Step]
 > shuffle (expr, stepList) = snd (foldl shunt (expr, []) stepList)
->                   where shunt (stepList, rs) (r, y) = (y, (r, expr):rs)
+>                   where shunt (expr, rs) (r, y) = (y, (r, expr):rs)
 >
 > printCalc :: Calculation -> String
 > printCalc (x, ss) = "||  " ++ show x ++ "\n||" ++
