@@ -157,17 +157,20 @@ Datentypen zu unseren erdachten Funktionen
 - Expression
 
 > data Expr = Var VarName | Con ConName[Expr] | Compose[Expr]
->           deriving (Eq, Ord)
+>           deriving (Eq, Ord, Show)
+
+<           deriving (Eq, Ord)
+
 > type VarName = Char
 > type ConName = String
 >
 
-> instance Show Expr where
->    show (Var name) = [name]
->    show (Con name []) = name
->    show (Con name (x:[])) = name ++ " " ++ show x
->    show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
->    show (Compose xs) = toStr xs "."
+ instance Show Expr where
+    show (Var name) = [name]
+    show (Con name []) = name
+    show (Con name (x:[])) = name ++ " " ++ show x
+    show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
+    show (Compose xs) = toStr xs "."
 
 > toStr [] _ = ""
 > toStr (x:[]) _ = show x
@@ -356,11 +359,17 @@ Substitution an Ausdruck binden.
 > match (Var x,y) = [[(x,y)]]
 > match (Con f xs, Var v) = []
 > match (Con f xs, Compose ys) = []
-> match (Con f xs, Con g ys) = if f == g then matchlist (zip xs ys) else []
+> match (Con f xs, Con g ys) = if f == g 
+>                                   then if xs == ys 
+>                                       then [[]] 
+>                                       else matchlist (zip xs ys) 
+>                                   else []
 > match (Compose xs, Var v) = []
 > match (Compose xs, Con g ys) = []
-> match (Compose xs, Compose ys) = concat (map matchlist (align xs ys))
-
+> match (Compose xs, Compose ys) = if xs == ys 
+>                                   then [[]]
+>                                   else concat (map matchlist (align xs ys))
+>
 > matchlist :: [(Expr, Expr)] -> [Subst]
 > matchlist = concat . map unify . cplist . map match
 
@@ -381,12 +390,16 @@ Liste einmal.
 > union s t = if compatible s t then [nub (s ++ t)] else []
 
 > compatible :: Subst -> Subst -> Bool
-> compatible (x:xs) [] = False
-> compatible [] (y:ys) = False
-> compatible [] [] = True
-> compatible ((n1, e1):xs) ((n2, e2):ys) = if n1 == n2 && e1 == e2
->                                          then compatible xs ys
->                                          else False
+> compatible _ _ = True
+> 
+
+
+ compatible (x:xs) [] = False
+ compatible [] (y:ys) = False
+ compatible [] [] = True
+ compatible ((n1, e1):xs) ((n2, e2):ys) = if n1 == n2 && e1 == e2
+                                          then compatible xs ys
+                                          else False
 
 
 
