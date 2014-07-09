@@ -141,7 +141,7 @@ Calculater:
 
 > module Calculon where
 > import Parser
-> import Data.List (nub)
+> import Data.List (nub, union)
 
 Datentypen zu unseren erdachten Funktionen
 --------------------------------------------------
@@ -338,14 +338,11 @@ Substitution an Ausdruck binden.
 
 
 > extend :: Subst -> (VarName, Expr) -> [Subst]
-> extend s (v, x) = union s [(Var v, x)]
-
-
-extend s (v,x)
-    | y == x = [s]
-    | y == Var v = [(v,x):s]
-    | otherwise = []
-        where y = binding s v
+> extend s (v,x)
+>     | y == x = [s]
+>     | y == Var v = [(v,x):s]
+>     | otherwise = []
+>         where y = binding s v
 
 
 TODO phils shit kapitel matching seite 388
@@ -377,7 +374,7 @@ TODO phils shit kapitel matching seite 388
 > matchlist = concat . map unify . cplist . map match
 
 > xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
-> xmatchlist s xys = concat [union s t | t <- matchlist xys]
+> xmatchlist s xys = concat [union [s] [t] | t <- matchlist xys]
 
 > align :: [Expr] -> [Expr] -> [[(Expr,Expr)]]
 > align xs ys = [zip xs (map compose zs) | zs <- parts (length xs) ys]
@@ -456,17 +453,17 @@ Die wichtigste Funktion
 
 > unify :: [Subst] -> [Subst]
 > unify [] = [[]]
-> unify (s:ss) = concat [union s t | t <- unify ss]
+> unify (s:ss) = concat [union [s] [t] | t <- unify ss]
 
-> union :: Subst -> Subst -> [Subst]
-> union s t = if compatible s t then [nub (s ++ t)] else []
->
+ union :: Subst -> Subst -> [Subst]
+ union s t = if compatible s t then [nub (s ++ t)] else []
+
 > compatible :: Subst -> Subst -> Bool
 > compatible _ _ = True
 >
 >
 > cup :: [Subst] -> [Subst] -> [Subst]
-> cup ss ts = concat [union s t | s <- ss, t <- ts]
+> cup ss ts = concat [union [s] [t] | s <- ss, t <- ts]
 >
 
 
