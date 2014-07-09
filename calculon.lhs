@@ -489,12 +489,13 @@ Liste einmal.
 >       "definition cross: cross(f,g) = pair(f.fst, g.snd)",
 >       "pair absorption: pair(f, g).h = pair(f.h, g.h)" ]
 
-
+>
 > exampleExprSimplify = "cross(f, g).pair(h, k)"
 > sim1 = parseExpr exampleExprSimplify
 > sim2 = parseExpr "pair(f.fst, g.snd).pair(h, k)"
+>
 > exampleLawsSimplify = partition basicLaw pairs
-
+>
 > filters = map parseLaw [
 >      "definition filter: filter p = concat.map(box p)",
 >      "definition box: box p = if(p, wrap, nil)" ]
