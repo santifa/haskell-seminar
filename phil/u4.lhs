@@ -51,9 +51,6 @@ Definieren Sie Funktionen
 
 die die Anzahl der Blätter resp. inneren Knoten eines |BTree|s berechnen. ({\bf 2pt})
 
-< leafs = ...
-< nodes = ...
-
 > leafs :: Btree a -> Int
 > leafs Empty = 1
 > leafs Branch _ x y = (leafs x) + (leafs y)
