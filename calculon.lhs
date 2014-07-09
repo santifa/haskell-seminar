@@ -466,7 +466,7 @@ Die wichtigste Funktion
 >
 >
 > cup :: [Subst] -> [Subst] -> [Subst]
-> cup ss ts = caoncat [union s t | s <- ss, t <- ts]
+> cup ss ts = concat [union s t | s <- ss, t <- ts]
 >
 
 
