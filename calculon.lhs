@@ -492,7 +492,8 @@ Die wichtigste Funktion
 > simpleton (Compose xs) = False
 
 
-
+gibt alle Kombinationen aus die der Länge der Regel |xs| entsprechen
+und bildet ersetzungskombinationen zwischen den xs und ys elementen
 
 > align :: [Expr] -> [Expr] -> [[(Expr,Expr)]]
 > align xs ys = [zip xs (map compose zs) | zs <- parts (length xs) ys]
