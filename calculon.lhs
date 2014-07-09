@@ -19,6 +19,12 @@ Gliederung
 0) Endlich mal was praktisches
 -------------------------------------------------------------------------------
 
+> module Calculon where
+> import Parser
+> import Data.List (nub, union)
+> import Debug.Trace
+
+
 Wir wollen einen automatischen Beweiser implementieren.
 
 1) Basics für die gute Küche
@@ -59,28 +65,34 @@ Rekursive Definitionen -> Endlosschleifen
 
 --------------------------------------------------
 
-let laws = filters ++ ifs ++others
+> pairs = map parseLaw [
+>       "definition fst: fst.pair(f, g) = f",
+>       "definition snd: snd.pair(f, g) = g",
+>       "definition cross: cross(f,g) = pair(f.fst, g.snd)",
+>       "pair absorption: pair(f, g).h = pair(f.h, g.h)" ]
 
-let filters
-   = map parseLaw [
-     "definition filter: filter p = concat.map(box p)",
-     "definition box:    box p = if(p, wrap, nil)"
-   ]
+> laws = filters ++ ifs ++others
 
-let ifs
-   = map parseLaw [
-     "if over composiition:  if(p,f,g).h = if(p.h, f.h, g.h)",
-     "composition over if:   h.if(p,f,g) = if(p, h.f, h.g)"
-   ]
+> filters
+>    = map parseLaw [
+>      "definition filter: filter p = concat.map(box p)",
+>      "definition box:    box p = if(p, wrap, nil)"
+>    ]
 
-let others
-   = map ParseLaw [
-     "nil constant:      nil.f = nil",
-     "nil natural:       map f.nil = nil",
-     "wrap natural:      map f.wrap = wrap.f",
-     "concat natural:    map f.concat = concat.map(map f)",
-     "map functor:       map f.map g = map(f.g)"
-   ]
+> ifs
+>    = map parseLaw [
+>      "if over composiition:  if(p,f,g).h = if(p.h, f.h, g.h)",
+>      "composition over if:   h.if(p,f,g) = if(p, h.f, h.g)"
+>    ]
+
+> others
+>    = map parseLaw [
+>      "nil constant:      nil.f = nil",
+>      "nil natural:       map f.nil = nil",
+>      "wrap natural:      map f.wrap = wrap.f",
+>      "concat natural:    map f.concat = concat.map(map f)",
+>      "map functor:       map f.map g = map(f.g)"
+>    ]
 
 
 ? prove laws "filter p.map f = map f.filter(p.f)"
@@ -139,26 +151,23 @@ Calculater:
 2) Pfannen, Töpfe und Zutaten
 -------------------------------------------------------------------------------
 
-> module Calculon where
-> import Parser
-> import Data.List (nub, union)
-
 Datentypen zu unseren erdachten Funktionen
 --------------------------------------------------
 
 - Expression
 
 > data Expr = Var VarName | Con ConName[Expr] | Compose[Expr]
->           deriving (Eq)
+>           deriving (Eq, Show)
 > type VarName = Char
 > type ConName = String
 >
-> instance Show Expr where
->   show (Var name) = [name]
->   show (Con name []) = name
->   show (Con name (x:[])) = name ++ " " ++ show x
->   show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
->   show (Compose xs) = toStr xs "."
+
+ instance Show Expr where
+   show (Var name) = [name]
+   show (Con name []) = name
+   show (Con name (x:[])) = name ++ " " ++ show x
+   show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
+   show (Compose xs) = toStr xs "."
 
 > toStr [] _ = ""
 > toStr (x:[]) _ = show x
@@ -175,9 +184,6 @@ Datentypen zu unseren erdachten Funktionen
 
 > type Calculation = (Expr, [Step])
 > type Step = (LawName, Expr)
-
-> newtype Set a = Set [a]
-
 
 Komposition von Ausdrücken
 --------------------------------------------------
@@ -264,6 +270,8 @@ Der Law Parser
 >
 > basicLaw :: Law -> Bool
 > basicLaw (name, lhs, rhs) = (complexity lhs > complexity rhs)
+
+-- bis hierhin richtig
 
 Die Berechnung
 --------------------------------------------------
@@ -376,6 +384,110 @@ TODO phils shit kapitel matching seite 388
 > xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
 > xmatchlist s xys = concat [union [s] [t] | t <- matchlist xys]
 
+TODO phils shit kapitel subexpression and rewriting
+
+>
+> subexprs :: Expr -> [SubExpr]
+> subexprs (Var v) = [(All, Var v)]
+> subexprs (Con f xs) = [(All, Con f xs)] ++ subterms xs
+> subexprs (Compose xs) = [(All, Compose xs)] ++ segments xs ++ subterms xs
+
+
+> subterms :: [Expr] -> [SubExpr]
+> subterms xs
+>   = [(Pos j loc, y) | j <- [0..n-1], (loc,y) <- subexprs (xs !! j)]
+>       where n = length xs
+>
+> segments :: [Expr] -> [SubExpr]
+> segments xs
+>   = [(Seg j k, Compose (take k (drop j xs))) | k <- [2..n-1], j <- [0..n-1]]
+>       where n = length xs
+
+
+
+> replace :: Expr -> Location -> Expr -> Expr
+> replace x All y = y
+> replace (Con f xs) (Pos j loc) y
+>   = Con f (take j xs ++ [replace (xs !! j) loc y] ++ drop (j+1) xs)
+> replace (Compose xs) (Pos j loc) y
+>   = compose (take j xs ++ [replace (xs !! j) loc y] ++ drop (j+1) xs)
+> replace (Compose xs) (Seg j k) y
+>   = compose (take j xs ++ [y] ++ drop (j+k) xs)
+>
+>
+
+Die wichtigste Funktion
+
+> calculate :: ([Law],[Law]) -> Expr -> Calculation
+> calculate laws x = (x,repeatedly (rewrites laws) x)
+>
+>
+> rewrites :: ([Law], [Law]) -> Expr -> [Step]
+> rewrites (basic, others) x
+>   = concat ([rewrite law sx x | law <- basic, sx <- subexprs x]
+>     ++ [rewrite law sx x | sx <- subexprs x, law <- others])
+>
+> rewrite :: Law -> SubExpr -> Expr -> [Step]
+> rewrite (name, lhs, rhs) (loc, y) x
+>   = [(name, replace x loc (applySub s rhs)) | s <- match (lhs, y)]
+
+
+> repeatedly :: (Expr -> [Step]) -> Expr -> [Step]
+> repeatedly rws x
+>   = if null steps then [] else (n,y) : repeatedly rws y
+>       where steps = rws x
+>             (n,y) = head steps
+
+
+
+> unify :: [Subst] -> [Subst]
+> unify [] = [[]]
+> unify (s:ss) = concat [union [s] [t] | t <- unify ss]
+
+> union' :: Subst -> Subst -> [Subst]
+> union' s t = if compatible s t then [nub (s ++ t)] else []
+
+> compatible :: Subst -> Subst -> Bool
+> compatible _ _ = True
+>
+>
+
+4) Genießen
+-------------------------------------------------------------------------------
+
+5) hilsfunktion und constanten
+-------------------------------------------------------------------------------
+
+>
+> exampleExprSimplify = "cross(f, g).pair(h, k)"
+> sim1 = parseExpr exampleExprSimplify
+> sim2 = parseExpr "pair(f.fst, g.snd).pair(h, k)"
+>
+> exampleLawsSimplify = partition basicLaw pairs
+>
+>
+> exampleExprProve = "filter p.map f = map f.filter(p.f)"
+> exampleLawsProve = partition basicLaw laws
+> rewB = [(law, sx, x) | law <- fst (exampleLawsSimplify), sx <- subexprs x]
+>   where x = parseExpr exampleExprSimplify
+> rewA = [(law, sx, x) | sx <- subexprs x, law <- snd (exampleLawsSimplify)]
+>   where x = parseExpr exampleExprSimplify
+
+> simple :: [Expr] -> Bool
+> simple xs = singleton xs && simpleton(head xs)
+
+- liste ist nicht leer
+
+> singleton :: [a] -> Bool
+> singleton xs = not (null xs) && null (tail xs)
+
+- gibt zurück ob regel einfach oder nicht
+
+> simpleton :: Expr -> Bool
+> simpleton (Var v)   = True
+> simpleton (Con f xs) = null xs
+> simpleton (Compose xs) = False
+
 > align :: [Expr] -> [Expr] -> [[(Expr,Expr)]]
 > align xs ys = [zip xs (map compose zs) | zs <- parts (length xs) ys]
 
@@ -394,83 +506,9 @@ TODO phils shit kapitel matching seite 388
 >
 > glue :: a -> [[a]] -> [[a]]
 > glue x (ys : yss) = (x : ys) : yss
->
->
 
-TODO phils shit kapitel subexpression and rewriting
-
->
-> subexprs :: Expr -> [SubExpr]
-> subexprs (Var v) = [(All, Var v)]
-> subexprs (Con f xs) = [(All, Con f xs)] ++ subterms xs
-> subexprs (Compose xs) = [(All, Compose xs)] ++ segments xs ++ subterms xs
->
->
-> subterms :: [Expr] -> [SubExpr]
-> subterms xs
->   = [(Pos j loc, y) | j <- [0..n-1], (loc,y) <- subexprs (xs !! j)]
->       where n = length xs
->
-> segments :: [Expr] -> [SubExpr]
-> segments xs
->   = [(Seg j k, Compose (take k (drop j xs))) | k <- [2..n-1], j <- [0..n-1]]
->       where n = length xs
->
-> replace :: Expr -> Location -> Expr -> Expr
-> replace x All y = y
-> replace (Con f xs) (Pos j loc) y
->   = Con f (take j xs ++ [replace (xs !! j) loc y] ++ drop (j+1) xs)
-> replace (Compose xs) (Pos j loc) y
->   = compose (take j xs ++ [replace (xs !! j) loc y] ++ drop (j+1) xs)
-> replace (Compose xs) (Seg j k) y
->   = compose (take j xs ++ [y] ++ drop (j+k) xs)
->
->
-
-Die wichtigste Funktion
-
-> calculate :: ([Law],[Law]) -> Expr -> Calculation
-> calculate pls x = (x,repeatedly (rewrites pls) x)
->
->
-> rewrites :: ([Law], [Law]) -> Expr -> [Step]
-> rewrites (llaws, rlaws) x
->   = concat ([rewrite law sx x | law <- llaws, sx <- subexprs x]
->     ++ [rewrite law sx x | sx <- subexprs x, law <- rlaws])
->
-> rewrite :: Law -> SubExpr -> Expr -> [Step]
-> rewrite (name, lhs, rhs) (loc, y) x
->   = [(name, replace x loc (applySub s rhs)) | s <- match (lhs, y)]
->
->
-> repeatedly :: (Expr -> [Step]) -> Expr -> [Step]
-> repeatedly rws x
->   = if null steps then [] else (n,y) : repeatedly rws y
->       where steps = rws x
->             (n,y) = head steps
-
-
-
-> unify :: [Subst] -> [Subst]
-> unify [] = [[]]
-> unify (s:ss) = concat [union [s] [t] | t <- unify ss]
-
- union :: Subst -> Subst -> [Subst]
- union s t = if compatible s t then [nub (s ++ t)] else []
-
-> compatible :: Subst -> Subst -> Bool
-> compatible _ _ = True
->
->
 > cup :: [Subst] -> [Subst] -> [Subst]
 > cup ss ts = concat [union [s] [t] | s <- ss, t <- ts]
->
-
-
-
-
-
-
 
 Verkettet alle n Listen in der Liste mit jedem anderen Element in der
 Liste einmal.
@@ -478,62 +516,6 @@ Liste einmal.
 > cplist :: [[a]] -> [[a]]
 > cplist [] = [[]]
 > cplist (xs:xss) = [y:ys| y <- xs, ys <- cplist xss]
-
-4) Genießen
--------------------------------------------------------------------------------
-
-5) hilsfunktion und constanten
--------------------------------------------------------------------------------
-
-
-> pairs = map parseLaw [
->       "definition fst: fst.pair(f, g) = f",
->       "definition snd: snd.pair(f, g) = g",
->       "definition cross: cross(f,g) = pair(f.fst, g.snd)",
->       "pair absorption: pair(f, g).h = pair(f.h, g.h)" ]
-
->
-> exampleExprSimplify = "cross(f, g).pair(h, k)"
-> sim1 = parseExpr exampleExprSimplify
-> sim2 = parseExpr "pair(f.fst, g.snd).pair(h, k)"
->
-> exampleLawsSimplify = partition basicLaw pairs
->
-> filters = map parseLaw [
->      "definition filter: filter p = concat.map(box p)",
->      "definition box: box p = if(p, wrap, nil)" ]
->
-> ifs = map parseLaw [
->      "if over composiition: if(p,f,g).h = if(p.h, f.h, g.h)",
->      "composition over if: h.if(p,f,g) = if(p, h.f, h.g)" ]
->
-> others = map parseLaw [
->      "nil constant: nil.f = nil",
->      "nil natural: map f.nil = nil",
->      "wrap natural: map f.wrap = wrap.f",
->      "concat natural: map f.concat = concat.map(map f)",
->      "map functor: map f.map g = map(f.g)" ]
->
-> laws = others ++ filters ++ ifs
->
-> exampleExprProve = "filter p.map f = map f.filter(p.f)"
-> exampleLawsProve = partition basicLaw laws
->
-
-> simple :: [Expr] -> Bool
-> simple xs = singleton xs && simpleton(head xs)
-
-- liste ist nicht leer
-
-> singleton :: [a] -> Bool
-> singleton xs = not (null xs) && null (tail xs)
-
-- gibt zurück ob regel einfach oder nicht
-
-> simpleton :: Expr -> Bool
-> simpleton (Var v)   = True
-> simpleton (Con f xs) = null xs
-> simpleton (Compose xs) = False
 
 Testesser
 --------------------------------------------------
