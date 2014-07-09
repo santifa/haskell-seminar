@@ -125,14 +125,14 @@ Rekursive Definitionen -> Endlosschleifen
 
 --------------------------------------------------
 
-1 Was haben damit erreicht?
+1 Was haben wir damit erreicht?
 Einfachheit
 - Nachteil: Terminiert nicht immer
 
 2 Unser Ansatz: Prioritäten
 1. Regeln wie beim Pattern Matching (Wer zuerst kommt, malt zuerst)
 2. Der erste Teilausdruck wird ersetzt
-3. Telausdrücke vor Regeln
+3. Teilausdrücke vor Regeln
 4. Regeln können in Basics und Others geteilt werden
 
 Unsere angepassten Funktionen:
@@ -157,17 +157,17 @@ Datentypen zu unseren erdachten Funktionen
 - Expression
 
 > data Expr = Var VarName | Con ConName[Expr] | Compose[Expr]
->           deriving (Eq, Show)
+>           deriving (Eq)
 > type VarName = Char
 > type ConName = String
 >
 
- instance Show Expr where
-   show (Var name) = [name]
-   show (Con name []) = name
-   show (Con name (x:[])) = name ++ " " ++ show x
-   show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
-   show (Compose xs) = toStr xs "."
+> instance Show Expr where
+>    show (Var name) = [name]
+>    show (Con name []) = name
+>    show (Con name (x:[])) = name ++ " " ++ show x
+>    show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
+>    show (Compose xs) = toStr xs "."
 
 > toStr [] _ = ""
 > toStr (x:[]) _ = show x
@@ -488,6 +488,9 @@ Die wichtigste Funktion
 > simpleton (Con f xs) = null xs
 > simpleton (Compose xs) = False
 
+
+
+
 > align :: [Expr] -> [Expr] -> [[(Expr,Expr)]]
 > align xs ys = [zip xs (map compose zs) | zs <- parts (length xs) ys]
 
@@ -496,7 +499,7 @@ Die wichtigste Funktion
 > parts 0 []            = [[]]
 > parts 0 (x : xs)      = []
 > parts (n) []          = []
-> parts (n) (x : xs)    = map (new x) (parts n xs) ++
+> parts (n) (x : xs)    = map (new x) (parts (n-1) xs) ++
 >                         map (glue x) (parts n xs)
 >
 >
