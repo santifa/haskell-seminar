@@ -141,7 +141,7 @@ Calculater:
 
 > module Calculon where
 > import Parser
-> import Data.List hiding (partition, union)
+> import Data.List (nub)
 
 Datentypen zu unseren erdachten Funktionen
 --------------------------------------------------
@@ -149,9 +149,20 @@ Datentypen zu unseren erdachten Funktionen
 - Expression
 
 > data Expr = Var VarName | Con ConName[Expr] | Compose[Expr]
->           deriving (Eq, Show)
+>           deriving (Eq)
 > type VarName = Char
 > type ConName = String
+>
+> instance Show Expr where
+>   show (Var name) = [name]
+>   show (Con name []) = name
+>   show (Con name (x:[])) = name ++ " " ++ show x
+>   show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
+>   show (Compose xs) = toStr xs "."
+
+> toStr [] _ = ""
+> toStr (x:[]) _ = show x
+> toStr (x:xs) i = show x ++ i ++ toStr xs i
 
 -> foldr f e kann nicht dargestellt werden, darum foldr (f, e)
 
@@ -164,6 +175,9 @@ Datentypen zu unseren erdachten Funktionen
 
 > type Calculation = (Expr, [Step])
 > type Step = (LawName, Expr)
+
+> newtype Set a = Set [a]
+
 
 Komposition von Ausdrücken
 --------------------------------------------------
@@ -185,19 +199,6 @@ Komplexität von Ausdrücken
 > complexity (Var v)      = 1
 > complexity (Con f xs)   = 1
 > complexity (Compose xs) = length xs
-
-Ausgabe für unsere Expressions
---------------------------------------------------
-
-> printExpr :: Expr -> String
-> printExpr (Var v)   = [v]
-> printExpr (Con f xs)
->     | null xs       = f
->     | simple xs     = f ++ " " ++  printExpr(head xs)
->     | otherwise     = f ++ "(" ++
->                         joinWith ", " (map printExpr xs) ++ ")"
-> printExpr (Compose xs) = joinWith "." (map printExpr xs)
-
 
 Der Parser für Expressions
 --------------------------------------------------
@@ -283,12 +284,12 @@ Die Berechnung
 >                   where shunt (stepList, rs) (r, y) = (y, (r, expr):rs)
 >
 > printCalc :: Calculation -> String
-> printCalc (x, ss) = "||  " ++ printExpr x ++ "\n||" ++
+> printCalc (x, ss) = "||  " ++ show x ++ "\n||" ++
 >                     concat (map printStep ss) ++ "\n"
 >
 > printStep :: Step -> String
 > printStep (why, x) = "=  {" ++ why ++ "} \n||  " ++
->                      printExpr x ++ "\n||"
+>                      show x ++ "\n||"
 
 Unsere vorher erdachten Funktionen
 --------------------------------------------------
@@ -354,8 +355,8 @@ TODO phils shit kapitel matching seite 388
 > match (Compose xs, Var v) = []
 > match (Compose xs, Con g ys) = []
 > match (Compose xs, Compose ys) = concat (map matchlist (align xs ys))
->
->
+
+
 > xmatch :: Subst -> (Expr,Expr) -> [Subst]
 > xmatch s (Var v,x)                = extend s (v,x)
 > xmatch s (Con f xs, Var v)        = []
@@ -366,21 +367,21 @@ TODO phils shit kapitel matching seite 388
 > xmatch s (Compose xs, Con g ys)   = []
 > xmatch s (Compose xs, Compose ys)
 >   = concat (map (xmatchlist s) (align xs ys))
->
->
->
+
+
+
 > matchlist :: [(Expr, Expr)] -> [Subst]
 > matchlist = concat . map unify . cplist . map match
 
 > xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
 > xmatchlist s []           = [s]
 > xmatchlist s (xy : xys)   = concat [xmatchlist t xys | t <- xmatch s xy]
->
->
+
+
 > align :: [Expr] -> [Expr] -> [[(Expr,Expr)]]
 > align xs ys = [zip xs (map compose zs) | zs <- parts (length xs) ys]
->
->
+
+
 > parts :: Int -> [a] -> [[[a]]]
 > parts 0 []            = [[]]
 > parts 0 (x : xs)      = []
@@ -449,47 +450,34 @@ Die wichtigste Funktion
 >   = if null steps then [] else (n,y) : repeatedly rws y
 >       where steps = rws x
 >             (n,y) = head steps
->
->
+
+
 
 > unify :: [Subst] -> [Subst]
 > unify [] = [[]]
 > unify (s:ss) = concat [union s t | t <- unify ss]
 
-
 > union :: Subst -> Subst -> [Subst]
-> union s t = if compatible s t then [merge' s t] else []
+> union s t = if compatible s t then [nub (s ++ t)] else []
 >
 > compatible :: Subst -> Subst -> Bool
-> compatible [] [] = True
-> compatible [] xs = False
+> compatible [] ys = False
 > compatible xs [] = False
-> compatible ((v, e):xs) ((vv, ee):ys) = if v /= vv
->                                    then False
->                                    else
->                                      if e /= ee
->                                      then False
->                                      else compatible xs ys
 >
 
+
+
+
+
+Verkettet alle n Listen in der Liste mit jedem anderen Element in der
+Liste einmal.
 
 > cplist :: [[a]] -> [[a]]
 > cplist [] = [[]]
 > cplist (xs:xss) = [y:ys| y <- xs, ys <- cplist xss]
->
-> merge' s t = nub $ merge s t
->
-> merge :: [a] -> [a] -> [a]
-> merge xs [] = xs
-> merge [] ys = ys
-> merge (x:xs) (y:ys) = x:y:(merge xs ys)
->
-
 
 4) Genießen
 -------------------------------------------------------------------------------
-
-
 
 5) hilsfunktion und constanten
 -------------------------------------------------------------------------------
@@ -528,9 +516,6 @@ Die wichtigste Funktion
 > exampleLawsProve = partition basicLaw laws
 >
 
-
-- joinWith aus Kapitel 5.5 und weitere Hilfsfunktionen
-
 > simple :: [Expr] -> Bool
 > simple xs = singleton xs && simpleton(head xs)
 
@@ -546,20 +531,17 @@ Die wichtigste Funktion
 > simpleton (Con f xs) = null xs
 > simpleton (Compose xs) = False
 
-> joinWith :: String -> [String] -> String
-> joinWith x = foldr1 (j)
->   where xs `j` ys = xs ++ x ++ ys
-
 Testesser
 --------------------------------------------------
 
 > printLaw xs = mapM_ putStrLn zs
 >   where zs = map (\(x, y, z) ->
->                    x ++ ":\t" ++  printExpr y ++ " :=: " ++ printExpr z) xs
+>                    x ++ ":\t" ++ show y ++ " :=: " ++ show z) xs
 
 > printList xs = mapM_ putStrLn xs
 > testLaw = printLaw pairs
->
+> testCpList = cplist [[1,2,3],[1,5,4],[5,77,89]]
 
 > test2 = putStr . printCalc . calculate (partition basicLaw pairs) . parseExpr
 > test3 = putStr . printCalc . calculate (partition basicLaw laws) . parseExpr
+> test4 = subexprs $ parseExpr "filter p.map f"
