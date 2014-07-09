@@ -338,12 +338,15 @@ Substitution an Ausdruck binden.
 
 
 > extend :: Subst -> (VarName, Expr) -> [Subst]
-> extend s (v,x)
->    | y == x = [s]
->    | y == Var v = [(v,x):s]
->    | otherwise = []
->        where y = binding s v
->
+> extend s (v, x) = union s [(Var v, x)]
+
+
+extend s (v,x)
+    | y == x = [s]
+    | y == Var v = [(v,x):s]
+    | otherwise = []
+        where y = binding s v
+
 
 TODO phils shit kapitel matching seite 388
 
@@ -374,9 +377,7 @@ TODO phils shit kapitel matching seite 388
 > matchlist = concat . map unify . cplist . map match
 
 > xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
-> xmatchlist s []           = [s]
-> xmatchlist s (xy : xys)   = concat [xmatchlist t xys | t <- xmatch s xy]
-
+> xmatchlist s xys = concat [union s t | t <- matchlist xys]
 
 > align :: [Expr] -> [Expr] -> [[(Expr,Expr)]]
 > align xs ys = [zip xs (map compose zs) | zs <- parts (length xs) ys]
@@ -461,9 +462,14 @@ Die wichtigste Funktion
 > union s t = if compatible s t then [nub (s ++ t)] else []
 >
 > compatible :: Subst -> Subst -> Bool
-> compatible [] ys = False
-> compatible xs [] = False
+> compatible _ _ = True
 >
+>
+> cup :: [Subst] -> [Subst] -> [Subst]
+> cup ss ts = caoncat [union s t | s <- ss, t <- ts]
+>
+
+
 
 
 
