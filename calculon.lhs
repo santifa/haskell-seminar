@@ -21,7 +21,7 @@ Gliederung
 
 > module Calculon where
 > import Parser
-> import Data.List (nub, union)
+> import Data.List (nub)
 > import Debug.Trace
 
 
@@ -157,17 +157,17 @@ Datentypen zu unseren erdachten Funktionen
 - Expression
 
 > data Expr = Var VarName | Con ConName[Expr] | Compose[Expr]
->           deriving (Eq, Show)
+>           deriving (Eq, Ord)
 > type VarName = Char
 > type ConName = String
 >
 
- instance Show Expr where
-   show (Var name) = [name]
-   show (Con name []) = name
-   show (Con name (x:[])) = name ++ " " ++ show x
-   show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
-   show (Compose xs) = toStr xs "."
+> instance Show Expr where
+>    show (Var name) = [name]
+>    show (Con name []) = name
+>    show (Con name (x:[])) = name ++ " " ++ show x
+>    show (Con name xs) = name ++ "(" ++ (toStr xs ", ") ++ ")"
+>    show (Compose xs) = toStr xs "."
 
 > toStr [] _ = ""
 > toStr (x:[]) _ = show x
@@ -382,7 +382,7 @@ TODO phils shit kapitel matching seite 388
 > matchlist = concat . map unify . cplist . map match
 
 > xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
-> xmatchlist s xys = concat [union [s] [t] | t <- matchlist xys]
+> xmatchlist s xys = concat [union s t | t <- matchlist xys]
 
 TODO phils shit kapitel subexpression and rewriting
 
@@ -442,15 +442,18 @@ Die wichtigste Funktion
 
 > unify :: [Subst] -> [Subst]
 > unify [] = [[]]
-> unify (s:ss) = concat [union [s] [t] | t <- unify ss]
+> unify (s:ss) = concat [union s t | t <- unify ss]
 
-> union' :: Subst -> Subst -> [Subst]
-> union' s t = if compatible s t then [nub (s ++ t)] else []
+> union :: Subst -> Subst -> [Subst]
+> union s t = if compatible s t then [nub (s ++ t)] else []
 
 > compatible :: Subst -> Subst -> Bool
-> compatible _ _ = True
->
->
+> compatible (x:xs) [] = True
+> compatible [] (y:ys) = False
+> compatible [] [] = True
+> compatible ((n1, e1):xs) ((n2, e2):ys) = if n1 == n2 && e1 <= e2
+>                                          then compatible xs ys
+>                                          else False
 
 4) Genießen
 -------------------------------------------------------------------------------
@@ -496,7 +499,7 @@ Die wichtigste Funktion
 > parts 0 []            = [[]]
 > parts 0 (x : xs)      = []
 > parts (n) []          = []
-> parts (n) (x : xs)    = map (new x) (parts n xs) ++
+> parts (n) (x : xs)    = map (new x) (parts (n - 1) xs) ++
 >                         map (glue x) (parts n xs)
 >
 >
@@ -508,7 +511,7 @@ Die wichtigste Funktion
 > glue x (ys : yss) = (x : ys) : yss
 
 > cup :: [Subst] -> [Subst] -> [Subst]
-> cup ss ts = concat [union [s] [t] | s <- ss, t <- ts]
+> cup ss ts = concat [union s t | s <- ss, t <- ts]
 
 Verkettet alle n Listen in der Liste mit jedem anderen Element in der
 Liste einmal.
