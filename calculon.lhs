@@ -352,9 +352,6 @@ Substitution an Ausdruck binden.
 >     | otherwise = []
 >         where y = binding s v
 
-
-TODO phils shit kapitel matching seite 388
-
 > match :: (Expr, Expr) -> [Subst]
 > match (Var x,y) = [[(x,y)]]
 > match (Con f xs, Var v) = []
@@ -364,29 +361,10 @@ TODO phils shit kapitel matching seite 388
 > match (Compose xs, Con g ys) = []
 > match (Compose xs, Compose ys) = concat (map matchlist (align xs ys))
 
-
-> xmatch :: Subst -> (Expr,Expr) -> [Subst]
-> xmatch s (Var v,x)                = extend s (v,x)
-> xmatch s (Con f xs, Var v)        = []
-> xmatch s (Con f xs, Compose ys)   = []
-> xmatch s (Con f xs, Con g ys)
->   = if f == g then xmatchlist s (zip xs ys) else []
-> xmatch s (Compose xs, Var v)      = []
-> xmatch s (Compose xs, Con g ys)   = []
-> xmatch s (Compose xs, Compose ys)
->   = concat (map (xmatchlist s) (align xs ys))
-
-
-
 > matchlist :: [(Expr, Expr)] -> [Subst]
 > matchlist = concat . map unify . cplist . map match
 
-> xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
-> xmatchlist s xys = concat [union s t | t <- matchlist xys]
 
-TODO phils shit kapitel subexpression and rewriting
-
->
 > subexprs :: Expr -> [SubExpr]
 > subexprs (Var v) = [(All, Var v)]
 > subexprs (Con f xs) = [(All, Con f xs)] ++ subterms xs
@@ -402,7 +380,6 @@ TODO phils shit kapitel subexpression and rewriting
 > segments xs
 >   = [(Seg j k, Compose (take k (drop j xs))) | k <- [2..n-1], j <- [0..n-1]]
 >       where n = length xs
-
 
 
 > replace :: Expr -> Location -> Expr -> Expr
@@ -461,30 +438,17 @@ Die wichtigste Funktion
 5) hilsfunktion und constanten
 -------------------------------------------------------------------------------
 
->
-> exampleExprSimplify = "cross(f, g).pair(h, k)"
-> sim1 = parseExpr exampleExprSimplify
-> sim2 = parseExpr "pair(f.fst, g.snd).pair(h, k)"
->
-> exampleLawsSimplify = partition basicLaw pairs
->
->
-> exampleExprProve = "filter p.map f = map f.filter(p.f)"
-> exampleLawsProve = partition basicLaw laws
-> rewB = [(law, sx, x) | law <- fst (exampleLawsSimplify), sx <- subexprs x]
->   where x = parseExpr exampleExprSimplify
-> rewA = [(law, sx, x) | sx <- subexprs x, law <- snd (exampleLawsSimplify)]
->   where x = parseExpr exampleExprSimplify
+ausdruck ist ein einfacher ausdruck
 
 > simple :: [Expr] -> Bool
 > simple xs = singleton xs && simpleton(head xs)
 
-- liste ist nicht leer
+liste ist nicht leer
 
 > singleton :: [a] -> Bool
 > singleton xs = not (null xs) && null (tail xs)
 
-- gibt zurück ob regel einfach oder nicht
+gibt zurück ob ausdruck einfach oder nicht
 
 > simpleton :: Expr -> Bool
 > simpleton (Var v)   = True
@@ -498,23 +462,23 @@ Die wichtigste Funktion
 > align xs ys = [zip xs (map compose zs) | zs <- parts (length xs) ys]
 
 
+
 > parts :: Int -> [a] -> [[[a]]]
 > parts 0 []            = [[]]
 > parts 0 (x : xs)      = []
 > parts (n) []          = []
-> parts (n) (x : xs)    = map (new x) (parts (n - 1) xs) ++
+> parts (n) (x : xs)    =  map (new x) (parts (n - 1) xs) ++
 >                         map (glue x) (parts n xs)
->
->
+
+x als erstes neue Element hinzufügen
+
 > new :: a -> [[a]] -> [[a]]
 > new x yss = [x] : yss
->
->
+
+x an das erste Element "kleben"
+
 > glue :: a -> [[a]] -> [[a]]
 > glue x (ys : yss) = (x : ys) : yss
-
-> cup :: [Subst] -> [Subst] -> [Subst]
-> cup ss ts = concat [union s t | s <- ss, t <- ts]
 
 Verkettet alle n Listen in der Liste mit jedem anderen Element in der
 Liste einmal.
@@ -537,3 +501,34 @@ Testesser
 > test2 = putStr . printCalc . calculate (partition basicLaw pairs) . parseExpr
 > test3 = putStr . printCalc . calculate (partition basicLaw laws) . parseExpr
 > test4 = subexprs $ parseExpr "filter p.map f"
+>
+> exampleExprSimplify = "cross(f, g).pair(h, k)"
+> sim1 = parseExpr exampleExprSimplify
+> sim2 = parseExpr "pair(f.fst, g.snd).pair(h, k)"
+>
+> exampleLawsSimplify = partition basicLaw pairs
+>
+>
+> exampleExprProve = "filter p.map f = map f.filter(p.f)"
+> exampleLawsProve = partition basicLaw laws
+> rewB = [(law, sx, x) | law <- fst (exampleLawsSimplify), sx <- subexprs x]
+>   where x = parseExpr exampleExprSimplify
+> rewA = [(law, sx, x) | sx <- subexprs x, law <- snd (exampleLawsSimplify)]
+>   where x = parseExpr exampleExprSimplify
+
+
+--------------------------------------------------------------------------------
+
+> xmatch :: Subst -> (Expr,Expr) -> [Subst]
+> xmatch s (Var v,x)                = extend s (v,x)
+> xmatch s (Con f xs, Var v)        = []
+> xmatch s (Con f xs, Compose ys)   = []
+> xmatch s (Con f xs, Con g ys)
+>   = if f == g then xmatchlist s (zip xs ys) else []
+> xmatch s (Compose xs, Var v)      = []
+> xmatch s (Compose xs, Con g ys)   = []
+> xmatch s (Compose xs, Compose ys)
+>   = concat (map (xmatchlist s) (align xs ys))
+
+> xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
+> xmatchlist s xys = concat [union s t | t <- matchlist xys]
