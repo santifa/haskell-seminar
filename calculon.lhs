@@ -365,6 +365,31 @@ Substitution an Ausdruck binden.
 > matchlist = concat . map unify . cplist . map match
 
 
+Verkettet alle n Listen in der Liste mit jedem anderen Element in der
+Liste einmal.
+
+> cplist :: [[a]] -> [[a]]
+> cplist [] = [[]]
+> cplist (xs:xss) = [y:ys| y <- xs, ys <- cplist xss]
+
+
+> unify :: [Subst] -> [Subst]
+> unify [] = [[]]
+> unify (s:ss) = concat [union s t | t <- unify ss]
+
+> union :: Subst -> Subst -> [Subst]
+> union s t = if compatible s t then [nub (s ++ t)] else []
+
+> compatible :: Subst -> Subst -> Bool
+> compatible (x:xs) [] = False
+> compatible [] (y:ys) = False
+> compatible [] [] = True
+> compatible ((n1, e1):xs) ((n2, e2):ys) = if n1 == n2 && e1 == e2
+>                                          then compatible xs ys
+>                                          else False
+
+
+
 > subexprs :: Expr -> [SubExpr]
 > subexprs (Var v) = [(All, Var v)]
 > subexprs (Con f xs) = [(All, Con f xs)] ++ subterms xs
@@ -409,28 +434,15 @@ Die wichtigste Funktion
 >   = [(name, replace x loc (applySub s rhs)) | s <- match (lhs, y)]
 
 
+nimmt den erstmöglich step an und wiederholt den vorgang mit
+der Expr aus dem letzten step bis keine steps mehr möglich sind
+
 > repeatedly :: (Expr -> [Step]) -> Expr -> [Step]
 > repeatedly rws x
 >   = if null steps then [] else (n,y) : repeatedly rws y
 >       where steps = rws x
 >             (n,y) = head steps
 
-
-
-> unify :: [Subst] -> [Subst]
-> unify [] = [[]]
-> unify (s:ss) = concat [union s t | t <- unify ss]
-
-> union :: Subst -> Subst -> [Subst]
-> union s t = if compatible s t then [nub (s ++ t)] else []
-
-> compatible :: Subst -> Subst -> Bool
-> compatible (x:xs) [] = True
-> compatible [] (y:ys) = False
-> compatible [] [] = True
-> compatible ((n1, e1):xs) ((n2, e2):ys) = if n1 == n2 && e1 <= e2
->                                          then compatible xs ys
->                                          else False
 
 4) Genießen
 -------------------------------------------------------------------------------
@@ -481,12 +493,6 @@ x an das erste Element "kleben"
 > glue :: a -> [[a]] -> [[a]]
 > glue x (ys : yss) = (x : ys) : yss
 
-Verkettet alle n Listen in der Liste mit jedem anderen Element in der
-Liste einmal.
-
-> cplist :: [[a]] -> [[a]]
-> cplist [] = [[]]
-> cplist (xs:xss) = [y:ys| y <- xs, ys <- cplist xss]
 
 Testesser
 --------------------------------------------------
