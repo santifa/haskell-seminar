@@ -26,9 +26,7 @@
 
 > module Uebung4 where
 > import Data.List (intercalate)
-> import Data.Random
-> import Data.Random.Source.DevRandom
-> import Data.Random.Extras
+> import System.Random (randomRIO)
 
 \section{Binärbäume}
 
@@ -51,23 +49,73 @@ Definieren Sie Funktionen
 
 die die Anzahl der Blätter resp. inneren Knoten eines |BTree|s berechnen. ({\bf 2pt})
 
-< leafs = ...
-< nodes = ...
+> leafs :: BTree a -> Int
 
-> leafs :: Btree a -> Int
-> leafs Empty = 1
-> leafs Branch _ x y = (leafs x) + (leafs y)
+> leafs (Empty) = 1
+> leafs (Branch _ x y) = (leafs x) + (leafs y)
 
 > nodes :: BTree a -> Int
-> nodes Empty = 0
-> nodes Branch _ x y = 1 + (leafs x) + (leafs y)
-
+> nodes (Empty) = 0
+> nodes (Branch _ x y) = 1 + (nodes x) + (nodes y)
 
 \subsection{|leafs bt = nodes bt + 1|}
 
 Beweisen Sie, dass für |bt :: BTree a| die Gleichung
 
+\begin{verbatim}
+
+"def leafs undefined: 	leafs undefined = undefined"
+"def leafs empty: 	leafs (Empty) = 1"
+"def leafs branch: 	leafs (Branch z x y) = (leafs x) + (leafs y)"
+
+"def nodes undefined: 	nodes undefined = undefined"
+"def nodes empty: 	nodes (Empty) = 0"
+"def nodes branch: 	nodes (Branch z x y) = 1 + (nodes x) + (nodes y)"
+
+\end{verbatim}
+
 < leafs bt = 1 + nodes bt
+
+\begin{verbatim}
+
+Fall : bt = undefined
+
+= leafs undefined
+  { def leafs undefined }
+= undefined
+  { Arithmetik }
+= 1 + undefined
+  { def nodes undefined }
+= 1 + nodes undefined
+
+Fall : bt = (Empty)
+
+= leafs (Empty)
+  {def leafs empty}
+= 1
+  { Arithmetik }
+= 1 + 0
+  {def nodes empty}
+= 1 + nodes (Empty)
+
+
+Fall : bt = (Branch z x y)
+
+= leafs (Branch z x y)
+  { def leafs branch }
+= (leafs x) + (leafs y)
+  { def leafs empty }
+= ( 1 ) + ( 1 )
+  { Arithmetik }
+= 1 + 1 + ( 0 ) + ( 0 )
+  { def nodes empty }
+= 1 + 1 + (nodes x) + (nodes y)
+  { def nodes branch }
+= 1 + node (Branch z x y)
+
+\end{verbatim}
+
+
 
 gilt. Wie üblich ist jede Gleichung mit einer Begründung zu versehen (!),
 arithmetische Umformungen und auch |1 + undefined = undefined| dürfen mit 
@@ -180,19 +228,28 @@ Beispiel
 
 1. Schreiben Sie eine Funktion
 
-< display :: (Show a) => Exp a -> String
+> display :: (Show a) => Exp a -> String
+> display (Val a) = show a
+> display (Op a o b) = "(" ++ (display a) ++ (blub o) ++ (display b) ++ ")"
+>			where blub Plus = "+"
+>			      blub Minus = "-"
+>			      blub Mult = "*"
 
 die eine mit '(' und ')') korrekt geklammerte String-Darstellung, z.B.
 |display expr = "(7 + ((4 - 23) * 2))"| liefert! ({\bf 1pt}) 
 
 2. Schreiben Sie eine Funktion
 
-< eval :: (Num a) => Exps a -> a
+> eval :: (Num a) => Exp a -> a
+> eval (Val a) = a
+> eval (Op a Plus b) = (eval a) + (eval b) 
+> eval (Op a Minus b) = (eval a) - (eval b) 
+> eval (Op a Mult b) = (eval a) * (eval b) 
 
 die den Wert eines Ausdrucks nach den üblichen Regeln der Arithmetik 
 berechnet! (z.B. |eval exp1 = -31|) ({\bf 1pt})
 
-3. Modifizieren Sie |Ops| und |Exps| so, dass auch Quotienten 
+3. Modifizieren Sie |Ops| und |Exp| so, dass auch Quotienten 
 dargestellt werden können und implementieren Sie eine Evaluierungsfunktion
 
 < eval2 :: (Integral a) => Exp2 a -> Maybe a
@@ -383,7 +440,8 @@ werden
 <          where
 <            winMoves    = pMoves (canWin p) (B b)
 <            remisMoves  = pMoves (canEnforceRemis p) (B b)
-<            pickMove bs = runRVar (choice (map Just bs)) DevRandom
+<            pickMove bs = randomRIO (0, length bs - 1) >>= return . Just . (bs !!)
+
 
 und schliesslich können wir Tic-Tac-Toe spielen:
 
@@ -418,8 +476,8 @@ und schliesslich können wir Tic-Tac-Toe spielen:
 <          else getPlayerMove p b
 <      chooseMyMove p b = do
 <        putStrLn "Let me think..."
-<        b' <- goodMove (other p) (B b) 
-<           where other X = O; other O = X
+<         b' <- let other X = O in
+<               let other O = X in goodMove (other p) (B b) 
 <        case b' of
 <          Nothing -> finMessage b "Ok, you win."
 <          (Just b'') -> play p b''

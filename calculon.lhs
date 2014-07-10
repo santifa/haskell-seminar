@@ -25,7 +25,7 @@ Gliederung
 > import Debug.Trace
 
 
-Wir wollen einen automatischen Beweiser implementieren.
+Wir wollen einen automatischen Beweiser kochen.
 
 1) Basics für die gute Küche
 -------------------------------------------------------------------------------
@@ -42,8 +42,11 @@ Zur besseren Behandlung, brauchen wir ein paar einfache Hilfsfunktionen.
 < printExpr :: Expr -> String
 < printCalc :: Calculation -> String
 
-//Woraus bestehen Laws?
-//-> Name und Gleichung
+Woraus bestehen Laws?
+ -> Name und Gleichung
+ -> "nil constant: nil.f = nil"
+ -> (Namen, lhs, rhs)
+
 
 Ein einfacher Term-Minimierer:
 < simplify :: [Law] -> String -> IO ()
@@ -59,9 +62,20 @@ oder anders herum. Aber nicht Abwechselnd -> Oszillieren
 Rekursive Definitionen -> Endlosschleifen
 
 => Was Tun?
-1. Bedingung -> Gleichung spalten und einzelne Terme vereinfachen.
-(Bis sie sich treffen)
-2. Bedingung -> Priorisierung der Regeln oder Generalisierung
+    2.1. Bedingung -> Gleichung spalten und einzelne Terme vereinfachen.(lhs, rhs)
+       (Bis sie sich treffen)
+    2.2. Bedingung -> Priorisierung der Regeln oder Generalisierung
+
+3.1 Was haben wir damit erreicht?
+    - Einfachheit
+    - Nachteil: Terminiert nicht immer
+
+3.2 Unser Ansatz: Prioritäten
+    - 1. Regeln wie beim Pattern Matching (Wer zuerst kommt, malt zuerst)
+    - 2. Der erste Teilausdruck wird ersetzt
+    - 3. Teilausdrücke vor Regeln
+    - 4. Regeln können in Basics und Others geteilt werden
+
 
 --------------------------------------------------
 
@@ -124,17 +138,6 @@ Rekursive Definitionen -> Endlosschleifen
    map f.filter(p.f)
 
 --------------------------------------------------
-
-1 Was haben wir damit erreicht?
-Einfachheit
-- Nachteil: Terminiert nicht immer
-
-2 Unser Ansatz: Prioritäten
-1. Regeln wie beim Pattern Matching (Wer zuerst kommt, malt zuerst)
-2. Der erste Teilausdruck wird ersetzt
-3. Teilausdrücke vor Regeln
-4. Regeln können in Basics und Others geteilt werden
-
 Unsere angepassten Funktionen:
 Simplifier:
 < simplify laws = putStr . printCalc . calculate (basic, others) . parseExpr
@@ -157,10 +160,7 @@ Datentypen zu unseren erdachten Funktionen
 - Expression
 
 > data Expr = Var VarName | Con ConName[Expr] | Compose[Expr]
-
-< >           deriving (Eq, Ord, Show)
-
->           deriving (Eq, Ord)
+>             deriving (Eq, Ord)
 
 > type VarName = Char
 > type ConName = String
@@ -205,6 +205,9 @@ Komposition von Ausdrücken
 Komplexität von Ausdrücken
 --------------------------------------------------
 
+anhand der komplexität entscheiden wir was in die basicLaw liste und
+was in die others liste kommt.
+
 > complexity :: Expr -> Int
 > complexity (Var v)      = 1
 > complexity (Con f xs)   = 1
@@ -216,10 +219,14 @@ Der Parser für Expressions
 > parseExpr :: String -> Expr
 > parseExpr = applyParser expr
 >
+
+"concat.map.f" => ["concat", "map", "f"]
+
 > expr :: Parser Expr
 > expr = do xs <- somewith (symbol ".") term
 >           return (compose xs)
->
+
+
 > term :: Parser Expr
 > term = do space
 >           c <- letter
@@ -275,34 +282,6 @@ Der Law Parser
 > basicLaw :: Law -> Bool
 > basicLaw (name, lhs, rhs) = (complexity lhs > complexity rhs)
 
--- bis hierhin richtig
-
-Die Berechnung
---------------------------------------------------
-
-> conclusion :: Calculation -> Expr
-> conclusion (x, steps) = if null steps then x else  snd (last steps)
->
-> paste :: Calculation -> Calculation -> Calculation
-> paste lhc rhc = (fst lhc, snd lhc ++ link x y ++ shuffle rhc)
->                 where x = conclusion lhc
->                       y = conclusion rhc
->
-> link :: Expr -> Expr -> [Step]
-> link x y = if x == y then [] else [("... ??? ...",y)]
->
-> shuffle :: Calculation -> [Step]
-> shuffle (expr, stepList) = snd (foldl shunt (expr, []) stepList)
->                   where shunt (expr, rs) (r, y) = (y, (r, expr):rs)
->
-> printCalc :: Calculation -> String
-> printCalc (x, ss) = "||  " ++ show x ++ "\n||" ++
->                     concat (map printStep ss) ++ "\n"
->
-> printStep :: Step -> String
-> printStep (why, x) = "=  {" ++ why ++ "} \n||  " ++
->                      show x ++ "\n||"
-
 Unsere vorher erdachten Funktionen
 --------------------------------------------------
 
@@ -328,6 +307,7 @@ Unsere Substition
 
 > type Subst = [(VarName, Expr)]
 
+
 Teilausdrücke und ihr Ort
 
 > type SubExpr = (Location, Expr)
@@ -348,13 +328,29 @@ Substitution an Ausdruck binden.
 > applySub s (Compose xs) = compose (map (applySub s) xs)
 
 
+SubExpressions
+--------------------------------------------------
 
-> extend :: Subst -> (VarName, Expr) -> [Subst]
-> extend s (v,x)
->     | y == x = [s]
->     | y == Var v = [(v,x):s]
->     | otherwise = []
->         where y = binding s v
+> subexprs :: Expr -> [SubExpr]
+> subexprs (Var v) = [(All, Var v)]
+> subexprs (Con f xs) = [(All, Con f xs)] ++ subterms xs
+> subexprs (Compose xs) = [(All, Compose xs)] ++ segments xs ++ subterms xs
+
+
+> subterms :: [Expr] -> [SubExpr]
+> subterms xs
+>   = [(Pos j loc, y) | j <- [0..n-1], (loc,y) <- subexprs (xs !! j)]
+>       where n = length xs
+>
+> segments :: [Expr] -> [SubExpr]
+> segments xs
+>   = [(Seg j k, Compose (take k (drop j xs))) | k <- [2..n-1], j <- [0..n-1]]
+>       where n = length xs
+
+
+
+Der Matcher
+--------------------------------------------------
 
 > match :: (Expr, Expr) -> [Subst]
 > match (Var x,y) = [[(x,y)]]
@@ -388,38 +384,11 @@ Liste einmal.
 > unify (s:ss) = concat [union s t | t <- unify ss]
 
 > union :: Subst -> Subst -> [Subst]
-> union s t = if compatible s t then [nub (s ++ t)] else []
-
-> compatible :: Subst -> Subst -> Bool
-> compatible _ _ = True
-> 
+> union s t = [nub (s ++ t)]
 
 
- compatible (x:xs) [] = False
- compatible [] (y:ys) = False
- compatible [] [] = True
- compatible ((n1, e1):xs) ((n2, e2):ys) = if n1 == n2 && e1 == e2
-                                          then compatible xs ys
-                                          else False
-
-
-
-> subexprs :: Expr -> [SubExpr]
-> subexprs (Var v) = [(All, Var v)]
-> subexprs (Con f xs) = [(All, Con f xs)] ++ subterms xs
-> subexprs (Compose xs) = [(All, Compose xs)] ++ segments xs ++ subterms xs
-
-
-> subterms :: [Expr] -> [SubExpr]
-> subterms xs
->   = [(Pos j loc, y) | j <- [0..n-1], (loc,y) <- subexprs (xs !! j)]
->       where n = length xs
->
-> segments :: [Expr] -> [SubExpr]
-> segments xs
->   = [(Seg j k, Compose (take k (drop j xs))) | k <- [2..n-1], j <- [0..n-1]]
->       where n = length xs
-
+Der Ersetzer
+--------------------------------------------------
 
 > replace :: Expr -> Location -> Expr -> Expr
 > replace x All y = y
@@ -432,7 +401,10 @@ Liste einmal.
 >
 >
 
+
+
 Die wichtigste Funktion
+--------------------------------------------------
 
 > calculate :: ([Law],[Law]) -> Expr -> Calculation
 > calculate laws x = (x,repeatedly (rewrites laws) x)
@@ -458,8 +430,41 @@ der Expr aus dem letzten step bis keine steps mehr möglich sind
 >             (n,y) = head steps
 
 
+Die Berechnung
+--------------------------------------------------
+
+> conclusion :: Calculation -> Expr
+> conclusion (x, steps) = if null steps then x else  snd (last steps)
+>
+> paste :: Calculation -> Calculation -> Calculation
+> paste lhc rhc = (fst lhc, snd lhc ++ link x y ++ shuffle rhc)
+>                 where x = conclusion lhc
+>                       y = conclusion rhc
+>
+> link :: Expr -> Expr -> [Step]
+> link x y = if x == y then [] else [("... ??? ...",y)]
+>
+> shuffle :: Calculation -> [Step]
+> shuffle (expr, stepList) = snd (foldl shunt (expr, []) stepList)
+>                   where shunt (expr, rs) (r, y) = (y, (r, expr):rs)
+>
+> printCalc :: Calculation -> String
+> printCalc (x, ss) = "||  " ++ show x ++ "\n||" ++
+>                     concat (map printStep ss) ++ "\n"
+>
+> printStep :: Step -> String
+> printStep (why, x) = "=  {" ++ why ++ "} \n||  " ++
+>                      show x ++ "\n||"
+
+
 4) Genießen
 -------------------------------------------------------------------------------
+
+Fragen ? 
+
+
+Danke für Eure Zeit !
+
 
 5) hilsfunktion und constanten
 -------------------------------------------------------------------------------
@@ -551,5 +556,18 @@ Testesser
 > xmatch s (Compose xs, Compose ys)
 >   = concat (map (xmatchlist s) (align xs ys))
 
+> extend :: Subst -> (VarName, Expr) -> [Subst]
+> extend s (v,x)
+>     | y == x = [s]
+>     | y == Var v = [(v,x):s]
+>     | otherwise = []
+>         where y = binding s v
+
+
 > xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
 > xmatchlist s xys = concat [union s t | t <- matchlist xys]
+ 
+ union :: Subst -> Subst -> [Subst]
+ union s t = if compatible s t then [nub (s ++ t)] else []
+ compatible :: Subst -> Subst -> Bool
+ compatible _ _ = True
