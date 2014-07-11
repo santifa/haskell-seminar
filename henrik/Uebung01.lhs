@@ -83,12 +83,10 @@ Implementieren Sie die Multiplikation multiply für Nat.
 
 \begin{code}
 multiply :: Nat -> Nat -> Nat
-multiply m (S n) = mul O m n
-
-mul :: Nat -> Nat -> Nat -> Nat
-mul x m O = add x m
-mul x m (S n) = mul (add x m) m n
+multiply (S O) m = m
+multiply (S n) m = add (multiply n m) m   
 \end{code}
+
 Die zweite Funktion mul könnte überflüssig werden
 
 \begin{code}
@@ -152,15 +150,9 @@ Typ Nat sein soll.
 
 \begin{code}
 lengthOf :: [Nat] -> Nat
-lengthOf list = len list O
-
-len :: [Nat] -> Nat -> Nat
-len list length = if null list
-           then length
-           else let t = tail list
-                in len t (S length)
+lengthOf [] = O
+lengthOf (x:xs) = S (lengthOf xs)
 \end{code}
-
 
 \begin{code}
 test8 = "lengthOf ([O,O,O,S(S(S(O))),O,S(S(O))] = " ++
@@ -177,13 +169,12 @@ Listenelement soll den Index 0 haben.
 \begin{code}
 get :: [Nat] -> Int -> Nat
 get [] _ = undefined
-get list 1 = head list
-get list index = get (tail list) (index-1)
+get list index = list !! index
 \end{code}
 
 \begin{code}
 test9 = "get ([O,O,O,S(S(S(O))),O,S(S(O))]) 3 = " ++
-        show ( get [O,O,O,S(S(S O)),O,S(S O)] 4)
+        show ( get [O,O,O,S(S(S O)),O,S(S O)] 3)
 \end{code}
 
 -------------------------------------------------------------------------------
