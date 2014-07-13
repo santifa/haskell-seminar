@@ -19,7 +19,7 @@
 --
 -- Übungsblatt 4 (Bäume)
 -- Abgabe bis: 09.07.2014
--- Name: Philip Ullrich 753088
+-- Name: Muster
 -- Erreichte Punkte:      / 28 
 ----------------------------------------------------------------------
 \end{verbatim}
@@ -49,6 +49,7 @@ Definieren Sie Funktionen
 
 die die Anzahl der Blätter resp. inneren Knoten eines |BTree|s berechnen. ({\bf 2pt})
 
+
 > leafs :: BTree a -> Int
 
 > leafs (Empty) = 1
@@ -61,6 +62,8 @@ die die Anzahl der Blätter resp. inneren Knoten eines |BTree|s berechnen. ({\bf
 \subsection{|leafs bt = nodes bt + 1|}
 
 Beweisen Sie, dass für |bt :: BTree a| die Gleichung
+
+< leafs bt = 1 + nodes bt
 
 \begin{verbatim}
 
@@ -115,8 +118,6 @@ Fall : bt = (Branch z x y)
 
 \end{verbatim}
 
-
-
 gilt. Wie üblich ist jede Gleichung mit einer Begründung zu versehen (!),
 arithmetische Umformungen und auch |1 + undefined = undefined| dürfen mit 
 ''Arithmetik'' begründet werden. ({\bf 2pt})
@@ -143,6 +144,20 @@ Schreiben Sie |leafs|, |nodes| und die Funktionen
 > flattenBT (Branch x lt rt) = ll ++ [x] ++ rl where
 >    [ll,rl] = (map flattenBT) [lt,rt]
 
+
+> leafsFold :: BTree a -> Int
+> leafsFold b = foldBT 1 ( \ _ y z -> y + z ) b
+
+> nodesFold :: BTree a -> Int
+> nodesFold b = foldBT 0 ( \ _ y z -> y + z + 1 ) b
+
+> heightFold :: BTree a -> Int
+> heightFold b = foldBT 0 ( \ _ y z -> 1 + (max y z) ) b
+
+> flattenBTFold :: BTree a -> [a]
+> flattenBTFold b = foldBT [] ( \ l y z -> [l] ++ y ++ z ) b
+
+
 als Instanzen von |foldBT|! ({\bf 2pt})
 
 \subsection{Balancierte Bäume und Paramorphismen}
@@ -161,14 +176,17 @@ auch von |nodes lt| und |nodes rt|, die Funktion |f| in
 
 Das lässt sich ändern: Verallgemeinern Sie |foldBT| zu
 
-< paramBT :: b -> (a -> (b,BTree a) -> (b,BTree a) -> b) -> BTree a -> b
-< paramBT = ...
+> paramBT :: b -> (a -> (b,BTree a) -> (b,BTree a) -> b) -> BTree a -> b
+> paramBT e f Empty = e
+> paramBT e f (Branch l lt rt) = f l (lt', lt) (rt', rt) where
+>      lt' = paramBT e f lt
+>      rt' = paramBT e f rt
 
 ({\bf 1pt}) und schreiben Sie |isBalanced| (unter Benutzung von |nodes|) 
 als ''Paramorphismus'', d.h. als Instanz von |paramBT| ({\bf 1pt}):
 
-< isBalanced = paramBT True f where
-<    f (bl,tl) _ (br,tr) = ...
+> isBalanced = paramBT True f where
+>    f _ (bl,tl) (br,tr) = (nodes tl - nodes tr) >= (0-1) && (nodes tl - nodes tr) <= 1
 
 ''Paramorphismen'' lassen sich für alle algebraischen Datentypen definieren.
 Für Listen haben wir (in Verallgemeinerung von |foldr|):
@@ -180,9 +198,9 @@ Für Listen haben wir (in Verallgemeinerung von |foldr|):
 Damit kann z.B. auch |dropWhile| implementiert werden. Vervollständigen Sie 
 folgende Definition: ({\bf 1pt})
 
-< dropWhile' :: (a -> Bool) -> [a] -> [a]
-< dropWhile' p = paramL f [] where
-<      f x (dxs,xs) = ...
+> dropWhile' :: (a -> Bool) -> [a] -> [a]
+> dropWhile' p = paramL f [] where
+>      f x (dxs,xs) = if p x then [x] ++ dxs else dxs
 
 \section{Funktoren}
 
@@ -219,7 +237,7 @@ insbesondere |Maybe| und |((->) r)|!
 Arithmetische Ausdrücke mit |+|,|-| und |*| können durch eine
 Baumstruktur |Exp a| dargestellt werden:
 
-> data Ops   = Plus | Minus | Mult 
+> data Ops   = Plus | Minus | Mult | Div
 > data Exp a = Val a | Op (Exp a) Ops (Exp a)
 
 Beispiel
@@ -235,6 +253,7 @@ Beispiel
 >			      blub Minus = "-"
 >			      blub Mult = "*"
 
+
 die eine mit '(' und ')') korrekt geklammerte String-Darstellung, z.B.
 |display expr = "(7 + ((4 - 23) * 2))"| liefert! ({\bf 1pt}) 
 
@@ -246,13 +265,21 @@ die eine mit '(' und ')') korrekt geklammerte String-Darstellung, z.B.
 > eval (Op a Minus b) = (eval a) - (eval b) 
 > eval (Op a Mult b) = (eval a) * (eval b) 
 
+
 die den Wert eines Ausdrucks nach den üblichen Regeln der Arithmetik 
 berechnet! (z.B. |eval exp1 = -31|) ({\bf 1pt})
 
 3. Modifizieren Sie |Ops| und |Exp| so, dass auch Quotienten 
 dargestellt werden können und implementieren Sie eine Evaluierungsfunktion
 
+< data Exp2 a = Val2 a | Op (Exp a) Ops (Exp a) 
+
 < eval2 :: (Integral a) => Exp2 a -> Maybe a
+< eval2 (Val a) = a
+< eval2 (Op a Div b) = (eval2 a) `div` (eval2 b)
+< eval2 (Op a Plus b) = (eval2 a) + (eval2 b) 
+< eval2 (Op a Minus b) = (eval2 a) - (eval2 b) 
+< eval2 (Op a Mult b) = (eval2 a) * (eval2 b) 
 
 |eval2| soll Quotienten mittels |div| auswerten und total sein. Kommt 
 irgendwo im Argumentausdruck eine Division durch |0| vor, soll |Nothing| 
@@ -296,7 +323,7 @@ Für beliebiges |n::Int| sollen dabei gelten
 
 < concat . (wrapAt n)                             = id
 < (all (<=n)) . (map length) . (wrapAt n)         = const True
-< (all (==n)) . (map length) . inits . (wrapAt n) = const True
+< (all (==n)) . (map length) . init . (wrapAt n)  = const True
 
 Geben Sie Funktionen
 
@@ -476,8 +503,10 @@ und schliesslich können wir Tic-Tac-Toe spielen:
 <          else getPlayerMove p b
 <      chooseMyMove p b = do
 <        putStrLn "Let me think..."
-<         b' <- let other X = O in
-<               let other O = X in goodMove (other p) (B b) 
+<        b' <- let 
+<           other X = O
+<           other O = X 
+<           in goodMove (other p) (B b) 
 <        case b' of
 <          Nothing -> finMessage b "Ok, you win."
 <          (Just b'') -> play p b''
