@@ -129,6 +129,24 @@ Schreiben Sie |leafs|, |nodes| und die Funktionen
 
 als Instanzen von |foldBT|! ({\bf 2pt})
 
+> leafs' :: BTree a -> Int
+> leafs' a = foldBT 1 count a
+>           where count _ a b = a + b
+>
+> nodes' :: BTree a -> Int
+> nodes' a = (foldBT 1 count a) - 1
+>            where count _ a b = a + b
+>
+> height' :: BTree a -> Int
+> height' a = foldBT 0 count a
+>           where count _ a b = 1 + (max a b)
+>
+> flattenBT' :: BTree a -> [a]
+> flattenBT' a = foldBT [] reduce a
+>           where reduce x l r = l ++ [x] ++ r
+>
+
+
 \subsection{Balancierte Bäume und Paramorphismen}
 
 Ein Binärbaum heisst ''balanciert'', wenn für jeden inneren Knoten die
@@ -136,6 +154,12 @@ Anzahlen der |nodes| im linken und rechten Teilbaum höchstens um |1|
 differieren. Der Balanciertheitstest
 
 < isBalanced :: BTree a -> Bool
+
+> isBalanced :: BTree a -> Bool
+> isBalanced (Branch _ Empty Empty) = True
+> isBalanced (Branch _ Empty a) = if (nodes a) > 1 then False else True
+> isBalanced (Branch _ a Empty) = if (nodes a) > 1 then False else True
+> isBalanced (Branch _ lt rt) = isBalanced lt && isBalanced rt
 
 lässt sich offenbar nicht als |foldBT|-Instanz schreiben:
 |isBalanced (Branch lt x rt) | hängt nicht nur von den boolschen
