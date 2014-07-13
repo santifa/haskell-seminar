@@ -5,8 +5,11 @@
 |   Universität Potsdam SS 2014                                               |
 |   Tim Richter / Mario Frank                                                 |
 |   Kapitel 12: "An automatic calculator"                                     |
-|   Philip Ullrich / Henrik Jürges
+|   Philip Ullrich / Henrik Jürges                                            |
 +-----------------------------------------------------------------------------+
+
+
+
 
 
 Gliederung
@@ -14,7 +17,12 @@ Gliederung
 0) Endlich mal was praktisches
 1) Basics für die gute Küche
 2) Pfannen, Töpfe und Zutaten
-3)
+3) Abschmecken
+4) Genießen
+5) Hilfsköche
+
+
+
 
 0) Endlich mal was praktisches
 -------------------------------------------------------------------------------
@@ -22,10 +30,15 @@ Gliederung
 > module Calculon where
 > import Parser
 > import Data.List (nub)
-> import Debug.Trace
 
 
 Wir wollen einen automatischen Beweiser kochen.
+
+
+
+
+
+
 
 1) Basics für die gute Küche
 -------------------------------------------------------------------------------
@@ -62,8 +75,8 @@ oder anders herum. Aber nicht Abwechselnd -> Oszillieren
 Rekursive Definitionen -> Endlosschleifen
 
 => Was Tun?
-    2.1. Bedingung -> Gleichung spalten und einzelne Terme vereinfachen.(lhs, rhs)
-       (Bis sie sich treffen)
+    2.1. Bedingung -> Gleichung spalten und einzelne Terme vereinfachen.
+       (lhs, rhs)
     2.2. Bedingung -> Priorisierung der Regeln oder Generalisierung
 
 3.1 Was haben wir damit erreicht?
@@ -71,10 +84,10 @@ Rekursive Definitionen -> Endlosschleifen
     - Nachteil: Terminiert nicht immer
 
 3.2 Unser Ansatz: Prioritäten
-    - 1. Regeln wie beim Pattern Matching (Wer zuerst kommt, malt zuerst)
-    - 2. Der erste Teilausdruck wird ersetzt
-    - 3. Teilausdrücke vor Regeln
-    - 4. Regeln können in Basics und Others geteilt werden
+    - Regeln wie beim Pattern Matching (Wer zuerst kommt, malt zuerst)
+    - Der erste Teilausdruck wird ersetzt
+    - Teilausdrücke vor Regeln
+    - Regeln können in Basics und Others geteilt werden
 
 
 --------------------------------------------------
@@ -235,16 +248,16 @@ Der Parser für Expressions
 >              then return (Var c)
 >             else do xs <- argument
 >                     return (Con (c:cs) xs)
->
+
 > argument :: Parser [Expr]
 > argument = tuple `orelse` (notuple `orelse` return [])
->
+
 > tuple :: Parser [Expr]
 > tuple = do symbol "("
 >            xs <- somewith (symbol ",") expr
 >            symbol ")"
 >            return xs
->
+
 > notuple :: Parser [Expr]
 > notuple = do space
 >              c <- letter
@@ -281,24 +294,6 @@ Der Law Parser
 >
 > basicLaw :: Law -> Bool
 > basicLaw (name, lhs, rhs) = (complexity lhs > complexity rhs)
-
-Unsere vorher erdachten Funktionen
---------------------------------------------------
-
-> simplify :: [Law] -> String -> IO ()
-> simplify laws = putStr . printCalc . calculate (basic,others) . parseExpr
->                 where (basic,others) = partition basicLaw laws
->
-> partition :: (a -> Bool) -> [a] -> ([a],[a])
-> partition p xs = (filter p xs, filter (not . p) xs)
->
-> prove :: [Law] -> String -> IO ()
-> prove laws = putStr . printCalc . proveEqn (basic,others) . parseEqn
->               where (basic,others) = partition basicLaw laws
->
-> proveEqn :: ([Law],[Law]) -> (Expr, Expr) -> Calculation
-> proveEqn laws (lhs,rhs) = paste (calculate laws lhs) (calculate laws rhs)
-
 
 3) Abschmecken
 -------------------------------------------------------------------------------
@@ -356,23 +351,21 @@ Der Matcher
 > match (Var x,y) = [[(x,y)]]
 > match (Con f xs, Var v) = []
 > match (Con f xs, Compose ys) = []
-> match (Con f xs, Con g ys) = if f == g 
->                                   then if xs == ys 
->                                       then [[]] 
->                                       else matchlist (zip xs ys) 
+> match (Con f xs, Con g ys) = if f == g
+>                                   then if xs == ys
+>                                       then [[]]
+>                                       else matchlist (zip xs ys)
 >                                   else []
 > match (Compose xs, Var v) = []
 > match (Compose xs, Con g ys) = []
-> match (Compose xs, Compose ys) = if xs == ys 
+> match (Compose xs, Compose ys) = if xs == ys
 >                                   then [[]]
 >                                   else concat (map matchlist (align xs ys))
 >
 > matchlist :: [(Expr, Expr)] -> [Subst]
 > matchlist = concat . map unify . cplist . map match
 
-
-Verkettet alle n Listen in der Liste mit jedem anderen Element in der
-Liste einmal.
+cplist bildet das kartesische Produkt.
 
 > cplist :: [[a]] -> [[a]]
 > cplist [] = [[]]
@@ -460,13 +453,56 @@ Die Berechnung
 4) Genießen
 -------------------------------------------------------------------------------
 
-Fragen ? 
+Unsere vorher erdachten Funktionen
+--------------------------------------------------
+
+> simplify :: [Law] -> String -> IO ()
+> simplify laws = putStr . printCalc . calculate (basic,others) . parseExpr
+>                 where (basic,others) = partition basicLaw laws
+>
+> partition :: (a -> Bool) -> [a] -> ([a],[a])
+> partition p xs = (filter p xs, filter (not . p) xs)
+>
+> prove :: [Law] -> String -> IO ()
+> prove laws = putStr . printCalc . proveEqn (basic,others) . parseEqn
+>               where (basic,others) = partition basicLaw laws
+>
+> proveEqn :: ([Law],[Law]) -> (Expr, Expr) -> Calculation
+> proveEqn laws (lhs,rhs) = paste (calculate laws lhs) (calculate laws rhs)
+
+
+
+
+
+Fragen ?
 
 
 Danke für Eure Zeit !
 
 
-5) hilsfunktion und constanten
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5) Hilfsköche
 -------------------------------------------------------------------------------
 
 ausdruck ist ein einfacher ausdruck
@@ -516,58 +552,15 @@ x an das erste Element "kleben"
 Testesser
 --------------------------------------------------
 
-> printLaw xs = mapM_ putStrLn zs
->   where zs = map (\(x, y, z) ->
->                    x ++ ":\t" ++ show y ++ " :=: " ++ show z) xs
-
-> printList xs = mapM_ putStrLn xs
-> testLaw = printLaw pairs
-> testCpList = cplist [[1,2,3],[1,5,4],[5,77,89]]
-
-> test2 = putStr . printCalc . calculate (partition basicLaw pairs) . parseExpr
-> test3 = putStr . printCalc . calculate (partition basicLaw laws) . parseExpr
-> test4 = subexprs $ parseExpr "filter p.map f"
+> test1 = putStr . printCalc . calculate (partition basicLaw pairs) . parseExpr
+> test2 = putStr . printCalc . calculate (partition basicLaw laws) . parseExpr
 >
-> exampleExprSimplify = "cross(f, g).pair(h, k)"
-> sim1 = parseExpr exampleExprSimplify
-> sim2 = parseExpr "pair(f.fst, g.snd).pair(h, k)"
->
-> exampleLawsSimplify = partition basicLaw pairs
+> exampleSimExpr = "cross(f, g).pair(h, k)"
+> exampleSimLaws = partition basicLaw pairs
 >
 >
-> exampleExprProve = "filter p.map f = map f.filter(p.f)"
-> exampleLawsProve = partition basicLaw laws
-> rewB = [(law, sx, x) | law <- fst (exampleLawsSimplify), sx <- subexprs x]
->   where x = parseExpr exampleExprSimplify
-> rewA = [(law, sx, x) | sx <- subexprs x, law <- snd (exampleLawsSimplify)]
->   where x = parseExpr exampleExprSimplify
+> exampleProveExpr = "filter p.map f = map f.filter(p.f)"
+> exampleProveLaws = partition basicLaw laws
 
 
 --------------------------------------------------------------------------------
-
-> xmatch :: Subst -> (Expr,Expr) -> [Subst]
-> xmatch s (Var v,x)                = extend s (v,x)
-> xmatch s (Con f xs, Var v)        = []
-> xmatch s (Con f xs, Compose ys)   = []
-> xmatch s (Con f xs, Con g ys)
->   = if f == g then xmatchlist s (zip xs ys) else []
-> xmatch s (Compose xs, Var v)      = []
-> xmatch s (Compose xs, Con g ys)   = []
-> xmatch s (Compose xs, Compose ys)
->   = concat (map (xmatchlist s) (align xs ys))
-
-> extend :: Subst -> (VarName, Expr) -> [Subst]
-> extend s (v,x)
->     | y == x = [s]
->     | y == Var v = [(v,x):s]
->     | otherwise = []
->         where y = binding s v
-
-
-> xmatchlist :: Subst -> [(Expr, Expr)] -> [Subst]
-> xmatchlist s xys = concat [union s t | t <- matchlist xys]
- 
- union :: Subst -> Subst -> [Subst]
- union s t = if compatible s t then [nub (s ++ t)] else []
- compatible :: Subst -> Subst -> Bool
- compatible _ _ = True
