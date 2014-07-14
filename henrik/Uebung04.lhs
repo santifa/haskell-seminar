@@ -172,11 +172,19 @@ Das lässt sich ändern: Verallgemeinern Sie |foldBT| zu
 < paramBT :: b -> (a -> (b,BTree a) -> (b,BTree a) -> b) -> BTree a -> b
 < paramBT = ...
 
+> paramBT :: b -> (a -> (b,BTree a) -> (b,BTree a) -> b) -> BTree a -> b
+> paramBT e f Empty = e
+> paramBT e f (Branch x l r) = f x (l', l) (r', r)
+>                   where l' = paramBT e f l
+>                         r' = paramBT e f r
+
 ({\bf 1pt}) und schreiben Sie |isBalanced| (unter Benutzung von |nodes|)
 als ''Paramorphismus'', d.h. als Instanz von |paramBT| ({\bf 1pt}):
 
 < isBalanced = paramBT True f where
 <    f (bl,tl) _ (br,tr) = ...
+
+> isBalanced' = paramBT True (\ _ (bl, tl) (br, tr) -> (nodes' tl - nodes' tr) < 2 && (nodes tl - nodes tr) >= (0-1))
 
 ''Paramorphismen'' lassen sich für alle algebraischen Datentypen definieren.
 Für Listen haben wir (in Verallgemeinerung von |foldr|):
@@ -191,6 +199,12 @@ folgende Definition: ({\bf 1pt})
 < dropWhile' :: (a -> Bool) -> [a] -> [a]
 < dropWhile' p = paramL f [] where
 <      f x (dxs,xs) = ...
+
+> doprWhile' :: (a -> Bool) -> [a] -> [a]
+> dropWhile' p = paramL f []
+>                where f x (dxs, xs) = if p x
+>                                      then [x] ++ xs
+>                                      else xs
 
 \section{Funktoren}
 
