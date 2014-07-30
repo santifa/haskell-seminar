@@ -116,6 +116,8 @@ Definieren Sie
 
 < emptyBoard, startBoard :: Board
 
+
+
 wo |emptyBoard| ein leeres Spielfeld und |startBoard| die oben angegebene
 Startstellung repräsentiert.
 
