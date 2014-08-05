@@ -25,6 +25,7 @@
 \end{verbatim}
 
 > module Othello where
+> import Data.Maybe
 
 \section{Einführung}
 
@@ -101,7 +102,28 @@ Wir verwenden folgende Datentypen
 
 > data Color = X | O deriving (Show,Eq)
 > type Pos   = (Char,Int)
-> data Board = Bo { unBo :: Pos -> Maybe Color }
+> data Board = Bo { unBo :: Pos -> Maybe Color } 
+
+> intersperse :: a -> [a] -> [a]
+> intersperse x []     = []
+> intersperse x [y]    = [y]
+> intersperse x (y:ys) = y:x:intersperse x ys
+
+> intercalate :: [a] -> [[a]] -> [a]
+> intercalate xs xss = concat (intersperse xs xss)
+
+> instance Show Board where
+>  show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
+>        ( intercalate "\n-------------------------------\n" (
+>          zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
+>                     (map (("  "++).show) [8,7..1])))  where 
+>        showMC (Just X) = "X"
+>        showMC (Just O) = "O"
+>        showMC Nothing  = " "
+>        bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
+
+
+
 
 Pos repräsentiert Felder (Positionen) auf dem Brett. ''Valide''
 Positionen sind solche mit erster Komponente im Bereich |['a'..'h']|
@@ -116,6 +138,18 @@ Definieren Sie
 
 < emptyBoard, startBoard :: Board
 
+> emptyBoard :: Board
+> emptyBoard = Bo unBo where
+>               unBo (x, y) = Nothing
+
+> startBoard :: Board
+> startBoard = Bo unBo where
+>                unBo (x, y) 
+>                    | (x, y) == ('d', 5) = Just O
+>                    | (x, y) == ('d', 4) = Just X
+>                    | (x, y) == ('e', 5) = Just X
+>                    | (x, y) == ('e', 4) = Just O
+>                    | otherwise = Nothing
 
 
 wo |emptyBoard| ein leeres Spielfeld und |startBoard| die oben angegebene
@@ -125,6 +159,17 @@ Definieren Sie Funktionen
 
 < content :: Pos -> Board -> Maybe Color
 < set :: Color -> Pos -> Board -> Board
+
+> content :: Pos -> Board -> Maybe Color
+> content (x, y) (Bo unBo) = unBo (x, y)
+
+> set :: Color -> Pos -> Board -> Board
+> set color (x, y) (Bo unBo) = Bo newBo where
+>                   -- concat old function to the new one and add a guard
+>                   newBo (c, i) 
+>                       | (x, y) == (c, i) = Just color
+>                       | isJust $ unBo (c, i) = unBo (c, i)
+>                       | otherwise = Nothing
 
 so, dass |content p b| der Inhalt des Felds |p| bei Brettsituation |b| ist
 und dass |set| einen Stein der angegebenen Farbe auf das angegebene Feld setzt (und
@@ -141,6 +186,15 @@ Definieren Sie Elemente
 
 > nw, no, ne, we, ea, sw, so, se :: Step
 
+> nw = undefined
+> no = undefined
+> ne = undefined
+> we = undefined
+> ea = undefined
+> sw = undefined
+> so = undefined
+> se = undefined
+
 die jeweils einen ''Schritt'' auf dem Brett (oder über den Rand) in die
 angedeutete Himmelsrichtung repräsentieren. Z.B. soll
 
@@ -152,6 +206,7 @@ Benutzen Sie die Funktionen dieser Typklasse!
 Definieren Sie eine Funktion
 
 > walk :: Pos -> Step -> [Pos]
+> walk = undefined
 
 die eine Liste der validen Positionen zurückgibt, die beim Wiederholen
 des angegebenen |Step| startend von der angegebenen Position durchlaufen werden.
@@ -192,11 +247,13 @@ Spielers, der am Zug ist, bestimmt. Wir definieren
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
 
-> data Move = Put Pos | Pass
+> data Move = Put Pos | Pass deriving Show
 
 Definieren Sie eine Funktion
 
 < play :: Move -> GameState -> Maybe GameState
+
+> play = undefined
 
 zum Ausführen eines Zuges (mit allen nötigen Drehungen von Steinen).
 Falls der angegebene Zug in der gegebenen Spielsituation nicht valide ist,
@@ -222,7 +279,7 @@ die eine Liste aller in der gegebenen Situation validen Züge berechnet.
 
 Der Spielbaum wird als RoseTree dargestellt:
 
-> RTree a = Node a [RTree a]
+> data RTree a = Node a [RTree a]
 > type GameTree = RTree (GameState,[Move])
 
 |GameTree| ist also ein |RTree|, dessen Label ein Paar aus einem GameState und
@@ -243,6 +300,8 @@ aus |gs| entsteht, wenn der Spieler, der an der Reihe ist, den Zug |ms!!n| spiel
 Implementieren Sie eine Funktion
 
 < gameTree :: GameState -> GameTree
+
+> gameTree = undefined
 
 die aus |gs| den Baum aller möglichen Folge-GameStates berechnet.
 
@@ -265,6 +324,8 @@ Implementieren Sie eine Funktion
 
 < winner :: GameState -> Maybe Color
 
+> winner = undefined
+
 die |Just winColor| liefert, falls in der Brettsituation |b| des Arguments
 |GS c b| die Partie beendet ist und der Spieler |winColor| gewinnt. Falls
 einer der Spieler in Brettsituation |b| noch Zugmöglichkeiten hat, soll
@@ -278,6 +339,8 @@ können hier immer nur eine gewisse (kleine) Anzahl von Zügen ''vorausberechnen
 Implementieren Sie eine Funktion
 
 < pruneRT :: Int -> RTree a -> RTree a
+
+> pruneRT = undefined
 
 die einen |RTree a| in der gegebenen Tiefe ''abschneidet''. Z.B. soll für
 
@@ -335,6 +398,8 @@ Implementieren Sie eine Bewertungsfunktion
 
 < valOthello :: Valuation
 
+> valOthello = undefined
+
 die in obigem Sinne ''vernünftig'' ist und für Spielsituationen |GS c b|, in denen
 es noch keinen Gewinner gibt, einfach | (2*m/tot) - 1| zurückgibt, wobei |tot| die
 Gesamtzahl der gesetzten Spielsteine in |b| und |m| die Anzahl der Steine der
@@ -358,6 +423,8 @@ im Falle |abs (val gs) == 1| keine Rekusion in die Teilbäume |ts| nötig ist.
 Implementieren Sie schliesslich eine Funktion
 
 < bestMoves :: Valuation -> GameTree -> [Move]
+
+> bestMoves = undefined
 
 sodass |bestMoves val (Node ((GS c b),ms) ts)| die für Spieler |c| in der
 Brettsituation |b| günstigsten Züge aus |ms| auswählt. Auch hier dürfen Sie davon
