@@ -164,7 +164,7 @@ Definieren Sie Funktionen
 > content (x, y) (Bo unBo) = unBo (x, y)
 
 > set :: Color -> Pos -> Board -> Board
-> set color (x, y) (Bo unBo) = Bo newBo where
+> set color (x, y) (Bo unBo) = if isJust $ unBo (x, y) then Bo unBo else Bo newBo where
 >                   -- concat old function to the new one and add a guard
 >                   newBo (c, i) 
 >                       | (x, y) == (c, i) = Just color
@@ -186,14 +186,14 @@ Definieren Sie Elemente
 
 > nw, no, ne, we, ea, sw, so, se :: Step
 
-> nw = undefined
-> no = undefined
-> ne = undefined
-> we = undefined
-> ea = undefined
-> sw = undefined
-> so = undefined
-> se = undefined
+> nw (x, y) = (pred x, succ y) 
+> no (x, y) = (x, succ y)
+> ne (x, y) = (succ x, succ y)
+> we (x, y) = (pred x, y)
+> ea (x, y) = (succ x, y)
+> sw (x, y) = (pred x, pred y)
+> so (x, y) = (x, pred y)
+> se (x, y) = (succ x, pred y)
 
 die jeweils einen ''Schritt'' auf dem Brett (oder über den Rand) in die
 angedeutete Himmelsrichtung repräsentieren. Z.B. soll
@@ -206,7 +206,11 @@ Benutzen Sie die Funktionen dieser Typklasse!
 Definieren Sie eine Funktion
 
 > walk :: Pos -> Step -> [Pos]
-> walk = undefined
+> walk (x, y) step
+>           | y == 1 || y == 8 = [(x, y)]
+>           | x == 'a' || x == 'g' = [(x, y)]
+>           | otherwise = (x, y):walk nstep step where
+>                       nstep = step (x, y)
 
 die eine Liste der validen Positionen zurückgibt, die beim Wiederholen
 des angegebenen |Step| startend von der angegebenen Position durchlaufen werden.
