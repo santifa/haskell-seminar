@@ -242,6 +242,7 @@ Implementieren Sie eine Funktion
 
 
 > fil' :: Maybe Color -> Board -> [Pos] -> Bool
+> fil' color (Bo unBo) [] = False
 > fil' color (Bo unBo) (pos:xs)
 >               | isJust farb && farb /= color = fil' color (Bo unBo) xs
 >               | isJust farb && farb == color = True
@@ -260,7 +261,26 @@ Definieren Sie eine Funktion
 < flipAll :: [Pos] -> Board -> Board
 
 > flipAll :: [Pos] -> Board -> Board
-> flipAll ±
+> flipAll (x:[]) (Bo unBo) = flip' x (Bo unBo)
+> flipAll (x:xs) (Bo unBo) = flipAll xs $ flip' x (Bo unBo)
+
+> flip' :: Pos -> Board -> Board
+> flip' x (Bo unBo) = Bo newBo where
+>           newBo c
+>               | x == c = rev $ unBo x
+>               | isJust (unBo c) = unBo c
+>               | otherwise = Nothing
+
+> rev :: Maybe Color -> Maybe Color
+> rev color 
+>       | color == Just X = Just O
+>       | color == Just O = Just X
+>       | otherwise = Nothing
+> rev' :: Color -> Color
+> rev' color 
+>       | color == X = O
+>       | color == O = X
+
 
 die die Steine an allen angegebenen Positionen dreht. Sie dürfen annehmen,
 dass das gegebene Brett tatsächlich an allen angegebenen Positionen einen
@@ -271,7 +291,7 @@ Spielstein hat.
 Eine Spielsituation wird durch die Angabe einer Brettsituation und des
 Spielers, der am Zug ist, bestimmt. Wir definieren
 
-> data GameState = GS Color Board
+> data GameState = GS Color Board deriving Show
 
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
@@ -282,7 +302,22 @@ Definieren Sie eine Funktion
 
 < play :: Move -> GameState -> Maybe GameState
 
-> play = undefined
+> play :: Move -> GameState -> Maybe GameState
+> play Pass (GS color (Bo unBo)) = let 
+>               pos = [ (x, y) | x <- ['a'..'h'], y <- [1..8], valid (x, y) color (Bo unBo)]
+>               in if null pos then Just $ GS (rev' color) (Bo unBo) else Nothing
+> play (Put (x, y)) (GS color (Bo unBo)) = if valid (x, y) color (Bo unBo)
+>                   then Just $ GS (rev' color) (flipAll npos nB)
+>                   else Nothing
+>                   where 
+>                       npos = posToFlip (x, y) nB
+>                       nB = set color (x, y) (Bo unBo)
+
+> valid :: Pos -> Color -> Board -> Bool
+> valid (x, y) c (Bo unBo) = (content (x, y) (Bo unBo)) == Nothing && 
+>                       not (null (posToFlip (x, y) nxB)) &&
+>                       (x <= 'h' || x >= 'a') && (y <= 8 || y >= 1)
+>                       where nxB = set c (x, y) (Bo unBo)
 
 zum Ausführen eines Zuges (mit allen nötigen Drehungen von Steinen).
 Falls der angegebene Zug in der gegebenen Spielsituation nicht valide ist,
