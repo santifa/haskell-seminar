@@ -167,7 +167,7 @@ Definieren Sie Funktionen
 > set color (x, y) (Bo unBo) = if isJust $ unBo (x, y) then Bo unBo else Bo newBo where
 >                   -- concat old function to the new one and add a guard
 >                   newBo (c, i) 
->                       | (x, y) == (c, i) = Just color
+>                       | (c, i) == (x, y) = Just color
 >                       | isJust $ unBo (c, i) = unBo (c, i)
 >                       | otherwise = Nothing
 
@@ -208,7 +208,7 @@ Definieren Sie eine Funktion
 > walk :: Pos -> Step -> [Pos]
 > walk (x, y) step
 >           | y == 1 || y == 8 = [(x, y)]
->           | x == 'a' || x == 'g' = [(x, y)]
+>           | x == 'a' || x == 'h' = [(x, y)]
 >           | otherwise = (x, y):walk nstep step where
 >                       nstep = step (x, y)
 
@@ -226,6 +226,28 @@ Implementieren Sie eine Funktion
 
 < posToFlip :: Pos -> Board -> [Pos]
 
+> posToFlip :: Pos -> Board -> [Pos]
+> posToFlip pos (Bo unBo) = let star = map (filter (pos /= )) [ walk pos s | s <- [nw, no, ne, we, ea, sw, so, se]]
+>                           in concat $ g $ f star where
+>                                   g [] = []
+>                                   g (xs:xss) = (takeWhile h xs):g xss where
+>                                       h a 
+>                                           | (unBo a) == (unBo pos) = False
+>                                           | not $ isJust (unBo a) = False
+>                                           | (unBo a) /= (unBo pos) = True
+>                                   f [] = []
+>                                   f (xs:xss) = if fil' (unBo pos) (Bo unBo) xs
+>                                           then xs:f xss
+>                                           else []:f xss
+
+
+> fil' :: Maybe Color -> Board -> [Pos] -> Bool
+> fil' color (Bo unBo) (pos:xs)
+>               | isJust farb && farb /= color = fil' color (Bo unBo) xs
+>               | isJust farb && farb == color = True
+>               | otherwise = False
+>               where farb = unBo pos
+
 die die Liste der Positionen berechnet, deren Steine zur Vervollständigung
 des Spielzuges umgedreht werden müssen, falls die angegebene Brettsituation
 durch ein Setzen eines Steins an die angegebene Position (mittels |set|)
@@ -236,6 +258,9 @@ soll z.B. |posToFlip ('c',4) b| (eine beliebige Umordnung von)
 Definieren Sie eine Funktion
 
 < flipAll :: [Pos] -> Board -> Board
+
+> flipAll :: [Pos] -> Board -> Board
+> flipAll ±
 
 die die Steine an allen angegebenen Positionen dreht. Sie dürfen annehmen,
 dass das gegebene Brett tatsächlich an allen angegebenen Positionen einen
