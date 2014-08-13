@@ -349,7 +349,7 @@ die eine Liste aller in der gegebenen Situation validen Züge berechnet.
 
 Der Spielbaum wird als RoseTree dargestellt:
 
-> data RTree a = Node a [RTree a]
+> data RTree a = Node a [RTree a] deriving Show
 > type GameTree = RTree (GameState,[Move])
 
 |GameTree| ist also ein |RTree|, dessen Label ein Paar aus einem GameState und
@@ -357,6 +357,14 @@ einer Liste von Zügen ist. Die Idee ist, mit |gs::GameState| auch |possibleMove
 im Label eines Knotens zu haben; dann kann mit Hilfe einer Funktion
 
 < toGameStates :: GameState -> [Move] -> [GameState]
+
+> toGameStates :: GameState -> [Move] -> [GameState]
+> toGameStates _ [] = []
+> toGameStates _ ((Pass):[]) = []
+> toGameStates (GS color board) ((Put x):xs) 
+>   | valid x color board = ((GS color nBo)):toGameStates (GS color board) xs 
+>   | otherwise = toGameStates (GS color board) xs
+>       where nBo = set color x board
 
 eine Liste von möglichen Folgesituation zum Aufbau des Baumes generiert werden.
 
@@ -372,6 +380,8 @@ Implementieren Sie eine Funktion
 < gameTree :: GameState -> GameTree
 
 > gameTree = undefined
+
+
 
 die aus |gs| den Baum aller möglichen Folge-GameStates berechnet.
 
