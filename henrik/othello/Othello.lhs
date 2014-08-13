@@ -306,6 +306,7 @@ Definieren Sie eine Funktion
 > play Pass (GS color (Bo unBo)) = let 
 >               pos = [ (x, y) | x <- ['a'..'h'], y <- [1..8], valid (x, y) color (Bo unBo)]
 >               in if null pos then Just $ GS (rev' color) (Bo unBo) else Nothing
+> 
 > play (Put (x, y)) (GS color (Bo unBo)) = if valid (x, y) color (Bo unBo)
 >                   then Just $ GS (rev' color) (flipAll npos nB)
 >                   else Nothing
@@ -336,6 +337,11 @@ valide wäre.
 Definieren Sie eine Funktion
 
 < possibleMoves :: GameState -> [Move]
+
+> possibleMoves :: GameState -> [Move]
+> possibleMoves (GS color (Bo unBo)) = let
+>       moves = [ (Put (x, y)) | x <- ['a'..'h'], y <- [1..8], valid (x, y) color (Bo unBo)]
+>       in if null moves then [(Pass)] else moves 
 
 die eine Liste aller in der gegebenen Situation validen Züge berechnet.
 
