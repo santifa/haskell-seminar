@@ -198,11 +198,15 @@ Definieren Sie eine Funktion
 
 > walk :: Pos -> Step -> [Pos]
 
-> walk ( '`', y ) _     = []
-> walk ( x, 0 ) _       = []
-> walk ( 'i', y) _      = []
-> walk ( x, 9 ) _       = []
-> walk p way            = p:walk (way p) way 
+> walk (x, y) dir
+>   | x > 'h' || x < 'a' || y > 8 || y < 1 = []
+>   | otherwise = (x, y):walk (dir (x, y)) dir
+
+< walk ( '`', y ) _     = []
+< walk ( x, 0 ) _       = []
+< walk ( 'i', y) _      = []
+< walk ( x, 9 ) _       = []
+< walk p dir            = p:walk (dir p) dir 
 
 
 walk' führt ein walk aus und schneidet das erste Element ab
@@ -224,12 +228,30 @@ sein.
 Implementieren Sie eine Funktion
 
 > posToFlip :: Pos -> Board -> [Pos]
+> posToFlip pos (Bo board) = concat $ map (getFlipable (board pos)) $ filter test l where
+>                               l = allWalk pos
+>                               test = isFlipableWalk (board pos) (Bo board)
+>                               getFlipable color [] = []
+>                               getFlipable color (x:xs)
+>                                   | board x == color = []
+>                                   | otherwise = x:(getFlipable color xs)
 
-> posToFlip pos (Bo board) = [ walk' pos way | way <- [nw, no, ne, we, ea, sw, so, se] ]
+
+gibt alle wege aus (alle himmelsrichtungen)
+
+> allWalk :: Pos -> [[Pos]]
+> allWalk pos = [ walk' pos dir | dir <- [nw, no, ne, we, ea, sw, so, se] ]
 
 
-> isFlipableWalk :: [pos] -> Board -> Bool
-> isFlipableWalk [] =  
+isFlipableWalk testet ob ein umdrehen von steinen 
+auf einem weg überhaupt möglich ist
+
+> isFlipableWalk :: Maybe Color -> Board -> [Pos]-> Bool
+> isFlipableWalk color _ [] = False
+> isFlipableWalk color (Bo board) (x:xs) 
+>       | board x == color        = True
+>       | board x == Nothing      = False
+>       | otherwise = isFlipableWalk color (Bo board) xs
 
 die die Liste der Positionen berechnet, deren Steine zur Vervollständigung
 des Spielzuges umgedreht werden müssen, falls die angegebene Brettsituation
@@ -240,7 +262,13 @@ soll z.B. |posToFlip ('c',4) b| (eine beliebige Umordnung von)
 
 Definieren Sie eine Funktion
 
-< flipAll :: [Pos] -> Board -> Board
+> flipAll :: [Pos] -> Board -> Board
+> flipAll [] board = board
+> flipAll (x:xs) (Bo board) = (Bo b) where
+>       b pos 
+>           | pos == x = if (Just X == board x) then Just O else Just X
+>           | otherwise = board pos
+
 
 die die Steine an allen angegebenen Positionen dreht. Sie dürfen annehmen,
 dass das gegebene Brett tatsächlich an allen angegebenen Positionen einen 
@@ -260,7 +288,24 @@ oder im ''Passen''.
 
 Definieren Sie eine Funktion 
 
-< play :: Move -> GameState -> Maybe GameState
+> play :: Move -> GameState -> Maybe GameState
+> play Pass (GS color b) = if h xs then Just (GS color' b) else Nothing where 
+>           color' = if color == X then O else X
+>           xs = [ posToFlip (x,y) (set color (x,y) b) | x <- ['a'..'h'], y <- [1..8]]
+>           h l = concat l == [] 
+> play (Put pos) (GS color (Bo board)) 
+>   | allWalk pos == [] = Nothing
+>   | isJust (board pos) = Nothing
+>   | posToFlip pos (set color pos (Bo board)) == [] = Nothing
+>   | otherwise = Just (GS color' board') where
+>                   color' = if color == X then O else X
+>                   board' = flipAll (posToFlip pos b) b where
+>                               b = set color pos (Bo board)
+
+< gtb :: Maybe GameState -> Board
+< gtb (Just (GS color board)) = board
+< gtb Nothing = emptyBoard
+
 
 zum Ausführen eines Zuges (mit allen nötigen Drehungen von Steinen). 
 Falls der angegebene Zug in der gegebenen Spielsituation nicht valide ist,
