@@ -279,12 +279,12 @@ Spielstein hat.
 Eine Spielsituation wird durch die Angabe einer Brettsituation und des
 Spielers, der am Zug ist, bestimmt. Wir definieren
 
-> data GameState = GS Color Board
+> data GameState = GS Color Board deriving Show
 
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
 
-> data Move = Put Pos | Pass
+> data Move = Put Pos | Pass deriving Show
 
 Definieren Sie eine Funktion 
 
@@ -301,10 +301,6 @@ Definieren Sie eine Funktion
 >                   color' = if color == X then O else X
 >                   board' = flipAll (posToFlip pos b) b where
 >                               b = set color pos (Bo board)
-
-< gtb :: Maybe GameState -> Board
-< gtb (Just (GS color board)) = board
-< gtb Nothing = emptyBoard
 
 
 zum Ausführen eines Zuges (mit allen nötigen Drehungen von Steinen). 
@@ -323,7 +319,17 @@ valide wäre.
 
 Definieren Sie eine Funktion 
 
-< possibleMoves :: GameState -> [Move]
+> possibleMoves :: GameState -> [Move]
+> possibleMoves (GS color (Bo board)) = if fil == [] then [Pass] else map p fil where
+>       p e = (Put e)
+>       fil = filter f xs where
+>           xs = [(x,y) | x <- ['a'..'h'], y <- [1..8]]
+>           f pos 
+>               | isJust $ board pos = False
+>               | concat [ posToFlip pos (set color pos (Bo board)) ] == [] = False
+>               | otherwise = True
+
+
 
 die eine Liste aller in der gegebenen Situation validen Züge berechnet.
 
