@@ -284,7 +284,7 @@ Spielers, der am Zug ist, bestimmt. Wir definieren
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
 
-> data Move = Put Pos | Pass deriving Show
+> data Move = Put Pos | Pass deriving (Show,Eq)
 
 Definieren Sie eine Funktion 
 
@@ -314,6 +314,13 @@ soll |play| das Ergebnis |Nothing| liefern. Valide ist ein |Put p|, falls
 am Zug ist, eingeschlossen (und dann also gedreht) wird.
 \end{itemize}
 
+wechselt die farbe
+
+> switchColor :: Color -> Color
+> switchColor X = O
+> switchColor O = X
+
+
 |Pass| ist nur valide, wenn es keine Position |p| gibt, für die |Put p|
 valide wäre.
 
@@ -338,15 +345,20 @@ die eine Liste aller in der gegebenen Situation validen Züge berechnet.
 Der Spielbaum wird als RoseTree dargestellt:
 
 
-> data RTree a = Node a [RTree a] 
+> data RTree a = Node a [RTree a] deriving Show
 > type GameTree = RTree (GameState,[Move])
 
 |GameTree| ist also ein |RTree|, dessen Label ein Paar aus einem GameState und
 einer Liste von Zügen ist. Die Idee ist, mit |gs::GameState| auch |possibleMoves gs|
 im Label eines Knotens zu haben; dann kann mit Hilfe einer Funktion
 
-< toGameStates :: GameState -> [Move] -> [GameState]
-
+> toGameStates :: GameState -> [Move] -> [GameState]
+> toGameStates _ [] = []
+> toGameStates gs (x:xs) = if isJust a then (b a):c else c where
+>       a = play x gs
+>       b (Just g) = g
+>       c = toGameStates gs xs
+ 
 eine Liste von möglichen Folgesituation zum Aufbau des Baumes generiert werden.
 
 Implementieren Sie |toGameStates|! 
@@ -358,7 +370,10 @@ aus |gs| entsteht, wenn der Spieler, der an der Reihe ist, den Zug |ms!!n| spiel
 
 Implementieren Sie eine Funktion
 
-< gameTree :: GameState -> GameTree
+> gameTree :: GameState -> GameTree
+> gameTree gs = Node ( gs , pm gs ) a where
+>           pm g = possibleMoves g
+>           a = [Node (gstate,pm gstate) [] | gstate <- (toGameStates gs (pm gs))]
 
 die aus |gs| den Baum aller möglichen Folge-GameStates berechnet. 
 
@@ -379,7 +394,22 @@ an Steinen der nachziehende Spieler, d.h. |O|, gewinnt.
 
 Implementieren Sie eine Funktion
 
-< winner :: GameState -> Maybe Color
+gibt die anzahl der steine mit der angegebenen Farbe
+
+> getColorCount :: Color -> Board -> Int
+> getColorCount color (Bo board) = foldr f 0 b where
+>       b = [(x,y) | x <- ['a'..'h'], y <- [1..8]]
+>       f pos = if board pos == Just color then (+1) else (+0)
+
+> winner :: GameState -> Maybe Color
+> winner (GS color board) = if (a || c) && (b || d) then Just e else Nothing where
+>       a = possibleMoves (GS X board) == []
+>       b = possibleMoves (GS O board) == []
+>       c = possibleMoves (GS X board) == [Pass]
+>       d = possibleMoves (GS O board) == [Pass]
+>       e = if gcc then color else switchColor color where
+>           gcc = (getColorCount color board) > (getColorCount (switchColor color) board)
+
 
 die |Just winColor| liefert, falls in der Brettsituation |b| des Arguments
 |GS c b| die Partie beendet ist und der Spieler |winColor| gewinnt. Falls
