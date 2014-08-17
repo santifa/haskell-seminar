@@ -423,7 +423,13 @@ können hier immer nur eine gewisse (kleine) Anzahl von Zügen ''vorausberechnen
 
 Implementieren Sie eine Funktion
 
-< pruneRT :: Int -> RTree a -> RTree a
+> pruneRT :: Int -> GameTree -> GameTree
+> pruneRT 0 (Node (gs, moves) _) = (Node (gs, moves) [])
+> pruneRT i (Node (gs, moves) xs) = Node (gs, moves) [ngt x | x <- xs] where
+>       ngt (Node (gs, _ ) _ ) = pruneRT (pred i) (gameTree gs)
+
+
+
 
 die einen |RTree a| in der gegebenen Tiefe ''abschneidet''. Z.B. soll für
 
