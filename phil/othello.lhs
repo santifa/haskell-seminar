@@ -24,6 +24,7 @@
 ----------------------------------------------------------------------
 \end{verbatim}
 
+
 > module Othello where
 
 \section{Einführung}
