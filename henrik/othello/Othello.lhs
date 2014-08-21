@@ -167,8 +167,7 @@ Definieren Sie Funktionen
 >                   -- concat old function to the new one and add a guard
 >                   newBo nPos 
 >                       | nPos == pos = Just color
->                       | isJust $ b nPos = b nPos
->                       | otherwise = Nothing
+>                       | otherwise = b nPos
 
 so, dass |content p b| der Inhalt des Felds |p| bei Brettsituation |b| ist
 und dass |set| einen Stein der angegebenen Farbe auf das angegebene Feld setzt (und
@@ -206,6 +205,7 @@ Definieren Sie eine Funktion
 
 > walk :: Pos -> Step -> [Pos]
 > walk pos step = unfoldr f pos
+>     -- unfold positions up to borders
 >   where f (x, y)
 >           | y < 1 || y > 8 = Nothing
 >           | x < 'a' || x > 'h' = Nothing
@@ -246,27 +246,18 @@ Definieren Sie eine Funktion
 < flipAll :: [Pos] -> Board -> Board
 
 > flipAll :: [Pos] -> Board -> Board
-> flipAll (x:[]) (Bo unBo) = flip' x (Bo unBo)
-> flipAll (x:xs) (Bo unBo) = flipAll xs $ flip' x (Bo unBo)
+> flipAll [] (Bo b) = Bo b
+> flipAll (p:ps) (Bo b) = flipAll ps (Bo nB)
+>   where nB pos
+>           | pos == p = Just $ rev $ fromJust $ b p
+>           | otherwise = b pos
 
-> flip' :: Pos -> Board -> Board
-> flip' x (Bo unBo) = Bo newBo where
->           newBo c
->               | x == c = rev $ unBo x
->               | isJust (unBo c) = unBo c
->               | otherwise = Nothing
-
-> rev :: Maybe Color -> Maybe Color
+> rev :: Color -> Color
+>   -- reverse a color
 > rev color 
->       | color == Just X = Just O
->       | color == Just O = Just X
->       | otherwise = Nothing
-
-> rev' :: Color -> Color
-> rev' color 
 >       | color == X = O
 >       | color == O = X
-
+>       | otherwise = O
 
 die die Steine an allen angegebenen Positionen dreht. Sie dürfen annehmen,
 dass das gegebene Brett tatsächlich an allen angegebenen Positionen einen
@@ -277,9 +268,7 @@ Spielstein hat.
 Eine Spielsituation wird durch die Angabe einer Brettsituation und des
 Spielers, der am Zug ist, bestimmt. Wir definieren
 
-> data GameState = GS Color Board 
-
-deriving Show
+> data GameState = GS Color Board deriving Show
 
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
@@ -291,22 +280,24 @@ Definieren Sie eine Funktion
 < play :: Move -> GameState -> Maybe GameState
 
 > play :: Move -> GameState -> Maybe GameState
-> play Pass (GS color (Bo unBo)) = let 
->               pos = [ (x, y) | x <- ['a'..'h'], y <- [1..8], valid (x, y) color (Bo unBo)]
->               in if null pos then Just $ GS (rev' color) (Bo unBo) else Nothing
-> 
-> play (Put (x, y)) (GS color (Bo unBo)) = if valid (x, y) color (Bo unBo)
->                   then Just $ GS (rev' color) (flipAll npos nB)
->                   else Nothing
->                   where 
->                       npos = posToFlip (x, y) nB
->                       nB = set color (x, y) (Bo unBo)
+> play Pass (GS c board)
+>   | null validPos = Just $ GS (rev c) board
+>   | otherwise = Nothing
+>     where validPos = [(x, y) | x <- ['a'..'h'], y <- [1..8], valid (x, y) c board]
+
+> play (Put pos) (GS c board)
+>   | valid pos c board = Just $ GS (rev c) nBoard
+>   | otherwise = Nothing
+>     where nBoard = flipAll (posToFlip pos sBoard) sBoard
+>           sBoard = set c pos board
 
 > valid :: Pos -> Color -> Board -> Bool
-> valid (x, y) c (Bo unBo) = (content (x, y) (Bo unBo)) == Nothing && 
->                       not (null (posToFlip (x, y) nxB)) &&
->                       (x <= 'h' || x >= 'a') && (y <= 8 || y >= 1)
->                       where nxB = set c (x, y) (Bo unBo)
+>   -- checks wether a position is valid or not
+>   -- first: no content; second: at least one flip; third: in board range
+> valid pos c board = (content pos board) == Nothing &&
+>   not (null (posToFlip pos nBoard)) && inbound pos
+>     where nBoard = set c pos board
+>           inbound (x, y) = x < 'i' || x >= 'a' && y < 9 || y > 0
 
 zum Ausführen eines Zuges (mit allen nötigen Drehungen von Steinen).
 Falls der angegebene Zug in der gegebenen Spielsituation nicht valide ist,
@@ -394,7 +385,7 @@ Implementieren Sie eine Funktion
 > winner :: GameState -> Maybe Color
 > winner (GS c (Bo b))
 >   | not $ null $ possibleMoves (GS c (Bo b)) = Nothing
->   | not $ null $ possibleMoves (GS (rev' c) (Bo b)) = Nothing
+>   | not $ null $ possibleMoves (GS (rev c) (Bo b)) = Nothing
 >   | o < x = Just X
 >   | o >= x = Just O
 >   where o = length [b (x,y) | x <- ['a'..'h'], y <- [1..8], isJust (b (x,y)) , (b (x,y)) == Just O]
