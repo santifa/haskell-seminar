@@ -26,6 +26,7 @@
 
 > module Othello where
 > import Data.Maybe
+> import Data.List (unfoldr, elemIndices)
 
 \section{Einführung}
 
@@ -114,13 +115,13 @@ Wir verwenden folgende Datentypen
 
 > instance Show Board where
 >  show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
->        ( intercalate "\n-------------------------------\n" (
->          zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
->                     (map (("  "++).show) [8,7..1])))  where 
->        showMC (Just X) = "X"
->        showMC (Just O) = "O"
->        showMC Nothing  = " "
->        bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
+>       ( intercalate "\n-------------------------------\n" (
+>         zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
+>                    (map (("  "++).show) [8,7..1])))  where 
+>       showMC (Just X) = "X"
+>       showMC (Just O) = "O"
+>       showMC Nothing  = " "
+>       bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
 
 
 
@@ -139,17 +140,15 @@ Definieren Sie
 < emptyBoard, startBoard :: Board
 
 > emptyBoard :: Board
-> emptyBoard = Bo unBo where
->               unBo (x, y) = Nothing
+> emptyBoard = Bo b
+>   where b _ = Nothing
 
 > startBoard :: Board
-> startBoard = Bo unBo where
->                unBo (x, y) 
->                    | (x, y) == ('d', 5) = Just O
->                    | (x, y) == ('d', 4) = Just X
->                    | (x, y) == ('e', 5) = Just X
->                    | (x, y) == ('e', 4) = Just O
->                    | otherwise = Nothing
+> startBoard = Bo b
+>   where b pos
+>             | pos == ('d', 5) || pos == ('e', 4) = Just O
+>             | pos == ('d', 4) || pos == ('e', 5)= Just X
+>             | otherwise = Nothing
 
 
 wo |emptyBoard| ein leeres Spielfeld und |startBoard| die oben angegebene
@@ -161,14 +160,14 @@ Definieren Sie Funktionen
 < set :: Color -> Pos -> Board -> Board
 
 > content :: Pos -> Board -> Maybe Color
-> content (x, y) (Bo unBo) = unBo (x, y)
+> content pos (Bo b) = b pos
 
 > set :: Color -> Pos -> Board -> Board
-> set color (x, y) (Bo unBo) = if isJust $ unBo (x, y) then Bo unBo else Bo newBo where
+> set color pos (Bo b) = if isJust $ b pos then Bo b else Bo newBo where
 >                   -- concat old function to the new one and add a guard
->                   newBo (c, i) 
->                       | (c, i) == (x, y) = Just color
->                       | isJust $ unBo (c, i) = unBo (c, i)
+>                   newBo nPos 
+>                       | nPos == pos = Just color
+>                       | isJust $ b nPos = b nPos
 >                       | otherwise = Nothing
 
 so, dass |content p b| der Inhalt des Felds |p| bei Brettsituation |b| ist
@@ -186,7 +185,7 @@ Definieren Sie Elemente
 
 > nw, no, ne, we, ea, sw, so, se :: Step
 
-> nw (x, y) = (pred x, succ y) 
+> nw (x, y) = (pred x, succ y)
 > no (x, y) = (x, succ y)
 > ne (x, y) = (succ x, succ y)
 > we (x, y) = (pred x, y)
@@ -206,11 +205,12 @@ Benutzen Sie die Funktionen dieser Typklasse!
 Definieren Sie eine Funktion
 
 > walk :: Pos -> Step -> [Pos]
-> walk (x, y) step
->           | y == 1 || y == 8 = [(x, y)]
->           | x == 'a' || x == 'h' = [(x, y)]
->           | otherwise = (x, y):walk nstep step where
->                       nstep = step (x, y)
+> walk pos step = unfoldr f pos
+>   where f (x, y)
+>           | y < 1 || y > 8 = Nothing
+>           | x < 'a' || x > 'h' = Nothing
+>           | otherwise = Just ((x, y), step (x, y))
+
 
 die eine Liste der validen Positionen zurückgibt, die beim Wiederholen
 des angegebenen |Step| startend von der angegebenen Position durchlaufen werden.
@@ -227,27 +227,12 @@ Implementieren Sie eine Funktion
 < posToFlip :: Pos -> Board -> [Pos]
 
 > posToFlip :: Pos -> Board -> [Pos]
-> posToFlip pos (Bo unBo) = let star = map (filter (pos /= )) [ walk pos s | s <- [nw, no, ne, we, ea, sw, so, se]]
->                           in concat $ g $ f star where
->                                   g [] = []
->                                   g (xs:xss) = (takeWhile h xs):g xss where
->                                       h a 
->                                           | (unBo a) == (unBo pos) = False
->                                           | not $ isJust (unBo a) = False
->                                           | (unBo a) /= (unBo pos) = True
->                                   f [] = []
->                                   f (xs:xss) = if fil' (unBo pos) (Bo unBo) xs
->                                           then xs:f xss
->                                           else []:f xss
-
-
-> fil' :: Maybe Color -> Board -> [Pos] -> Bool
-> fil' color (Bo unBo) [] = False
-> fil' color (Bo unBo) (pos:xs)
->               | isJust farb && farb /= color = fil' color (Bo unBo) xs
->               | isJust farb && farb == color = True
->               | otherwise = False
->               where farb = unBo pos
+>     -- reduce list to flipable enemy positions and concat
+> posToFlip pos (Bo b) = concat $ map (takeWhile (\p -> b p /= b pos)) flipable
+>      -- star is list of list in all possible directions
+>   where star = map (filter (pos /=)) [walk pos s| s <- [nw, no, ne, we, ea, sw, so, se]]
+>      -- remove Nothing positions
+>         flipable = map (filter (\x -> isJust $ b x)) star
 
 die die Liste der Positionen berechnet, deren Steine zur Vervollständigung
 des Spielzuges umgedreht werden müssen, falls die angegebene Brettsituation
@@ -276,6 +261,7 @@ Definieren Sie eine Funktion
 >       | color == Just X = Just O
 >       | color == Just O = Just X
 >       | otherwise = Nothing
+
 > rev' :: Color -> Color
 > rev' color 
 >       | color == X = O
@@ -291,7 +277,9 @@ Spielstein hat.
 Eine Spielsituation wird durch die Angabe einer Brettsituation und des
 Spielers, der am Zug ist, bestimmt. Wir definieren
 
-> data GameState = GS Color Board deriving Show
+> data GameState = GS Color Board 
+
+deriving Show
 
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
@@ -339,8 +327,8 @@ Definieren Sie eine Funktion
 < possibleMoves :: GameState -> [Move]
 
 > possibleMoves :: GameState -> [Move]
-> possibleMoves (GS color (Bo unBo)) = let
->       moves = [ (Put (x, y)) | x <- ['a'..'h'], y <- [1..8], valid (x, y) color (Bo unBo)]
+> possibleMoves (GS color board) = let
+>       moves = [ (Put (x, y)) | x <- ['a'..'h'], y <- [1..8], valid (x, y) color board]
 >       in if null moves then [(Pass)] else moves 
 
 die eine Liste aller in der gegebenen Situation validen Züge berechnet.
@@ -360,11 +348,10 @@ im Label eines Knotens zu haben; dann kann mit Hilfe einer Funktion
 
 > toGameStates :: GameState -> [Move] -> [GameState]
 > toGameStates _ [] = []
-> toGameStates _ ((Pass):[]) = []
-> toGameStates (GS color board) ((Put x):xs) 
->   | valid x color board = ((GS color nBo)):toGameStates (GS color board) xs 
->   | otherwise = toGameStates (GS color board) xs
->       where nBo = set color x board
+> toGameStates _ (Pass:[]) = []
+> toGameStates gs (x:xs) = if isJust ngs then (fromJust ngs):(toGameStates gs xs)
+>                          else toGameStates gs xs
+>                             where ngs = play x gs
 
 eine Liste von möglichen Folgesituation zum Aufbau des Baumes generiert werden.
 
@@ -379,9 +366,9 @@ Implementieren Sie eine Funktion
 
 < gameTree :: GameState -> GameTree
 
-> gameTree = undefined
-
-
+> gameTree :: GameState -> GameTree
+> gameTree gs = Node (gs, possibleMoves gs) xs
+>   where xs = [Node (ngs, possibleMoves ngs) [] | ngs <- toGameStates gs (possibleMoves gs)]
 
 die aus |gs| den Baum aller möglichen Folge-GameStates berechnet.
 
@@ -404,7 +391,14 @@ Implementieren Sie eine Funktion
 
 < winner :: GameState -> Maybe Color
 
-> winner = undefined
+> winner :: GameState -> Maybe Color
+> winner (GS c (Bo b))
+>   | not $ null $ possibleMoves (GS c (Bo b)) = Nothing
+>   | not $ null $ possibleMoves (GS (rev' c) (Bo b)) = Nothing
+>   | o < x = Just X
+>   | o >= x = Just O
+>   where o = length [b (x,y) | x <- ['a'..'h'], y <- [1..8], isJust (b (x,y)) , (b (x,y)) == Just O]
+>         x = length [b (x,y) | x <- ['a'..'h'], y <- [1..8], isJust (b (x,y)), (b (x,y)) == Just X]
 
 die |Just winColor| liefert, falls in der Brettsituation |b| des Arguments
 |GS c b| die Partie beendet ist und der Spieler |winColor| gewinnt. Falls
@@ -420,7 +414,10 @@ Implementieren Sie eine Funktion
 
 < pruneRT :: Int -> RTree a -> RTree a
 
-> pruneRT = undefined
+> pruneRT :: Int -> GameTree -> GameTree
+> pruneRT 0 (Node a _) = (Node a [])
+> pruneRT n (Node (gs, moves) xs) = Node (gs, moves) [rt x | x <- xs] where
+>   rt (Node (gs, moves) _) = pruneRT (pred n) (gameTree gs)
 
 die einen |RTree a| in der gegebenen Tiefe ''abschneidet''. Z.B. soll für
 
@@ -440,6 +437,9 @@ und dann |pruneRT| als |flip pruneRT'| mit
 < pruneRT' :: RTree a -> Int -> RTree a
 < pruneRT' = foldRT f where
 <   f ...
+
+> foldRT :: (a -> [b] -> b) -> RTree a -> b
+> foldRT f (Node a nodes) = f a (map (foldRT f) nodes)
 
 für eine geeignete Funktion |f|!
 
@@ -478,7 +478,11 @@ Implementieren Sie eine Bewertungsfunktion
 
 < valOthello :: Valuation
 
-> valOthello = undefined
+> valOthello :: Valuation
+> valOthello (GS c (Bo b)) = 2 * (fromIntegral m) / (fromIntegral tot)
+>   where m = length [b (x,y) | x <- ['a'..'h'], y <- [1..8], isJust (b (x,y)), (b (x,y)) == Just c]
+>         tot = length [b (x,y) | x <- ['a'..'h'], y <- [1..8], isJust (b (x,y))]
+
 
 die in obigem Sinne ''vernünftig'' ist und für Spielsituationen |GS c b|, in denen
 es noch keinen Gewinner gibt, einfach | (2*m/tot) - 1| zurückgibt, wobei |tot| die
@@ -489,6 +493,10 @@ konvertieren.
 Implementieren Sie eine Funktion
 
 < negaMax :: Valuation -> GameTree -> Double
+
+> negaMax :: Valuation -> GameTree -> Double
+> negaMax val (Node (gs, moves) ts) = maximum $ map val xs
+>   where xs = map (\(Node (gs, ms) xss) -> gs) ts
 
 sodass für eine ''vernünftige'' Bewertungsfunktion |val| und unter der
 Voraussetzung, dass beide Spieler bestmöglich spielen,
@@ -504,7 +512,17 @@ Implementieren Sie schliesslich eine Funktion
 
 < bestMoves :: Valuation -> GameTree -> [Move]
 
-> bestMoves = undefined
+> bestMoves :: Valuation -> GameTree -> [Move]
+> bestMoves val (Node a []) = []
+> bestMoves val (Node (gs, moves) ts) = getMoves (getInd gs moves val) moves
+>   where f (Node (gs, moves) ts) = getMoves (getInd gs moves val) moves
+
+> getMoves [] moves = []
+> getMoves (x:xs) moves = (moves!!x):(getMoves xs moves)
+
+> getInd :: GameState -> [Move] -> Valuation -> [Int]
+> getInd gs moves val = elemIndices (maximum mlist) mlist
+>   where mlist = map val (toGameStates gs moves)
 
 sodass |bestMoves val (Node ((GS c b),ms) ts)| die für Spieler |c| in der
 Brettsituation |b| günstigsten Züge aus |ms| auswählt. Auch hier dürfen Sie davon
