@@ -318,9 +318,8 @@ Definieren Sie eine Funktion
 < possibleMoves :: GameState -> [Move]
 
 > possibleMoves :: GameState -> [Move]
-> possibleMoves (GS color board) = let
->       moves = [ (Put (x, y)) | x <- ['a'..'h'], y <- [1..8], valid (x, y) color board]
->       in if null moves then [(Pass)] else moves 
+> possibleMoves (GS c board) = if null moves then [Pass] else moves
+>   where moves = [Put (x, y) | x <- ['a'..'h'], y <- [1..8], valid (x, y) c board]
 
 die eine Liste aller in der gegebenen Situation validen Züge berechnet.
 
