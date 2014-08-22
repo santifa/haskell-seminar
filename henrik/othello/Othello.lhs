@@ -232,7 +232,12 @@ Implementieren Sie eine Funktion
 >      -- star is list of list in all possible directions
 >   where star = map (filter (pos /=)) [walk pos s| s <- [nw, no, ne, we, ea, sw, so, se]]
 >      -- remove Nothing positions
->         flipable = map (filter (\x -> isJust $ b x)) star
+>         flipable = filter f $ map (takeWhile (\x -> isJust (b x))) star
+>           where f [] = False
+>                 f (x:xs)
+>                   | (b x) /= (b pos) = f xs
+>                   | (b x) == (b pos) = True
+>                   | otherwise = False
 
 die die Liste der Positionen berechnet, deren Steine zur Vervollständigung
 des Spielzuges umgedreht werden müssen, falls die angegebene Brettsituation
@@ -297,7 +302,7 @@ Definieren Sie eine Funktion
 > valid pos c board = (content pos board) == Nothing &&
 >   not (null (posToFlip pos nBoard)) && inbound pos
 >     where nBoard = set c pos board
->           inbound (x, y) = x < 'i' || x >= 'a' && y < 9 || y > 0
+>           inbound (x, y) = (x <= 'h' || x >= 'a') && (y < 9 || y > 0)
 
 zum Ausführen eines Zuges (mit allen nötigen Drehungen von Steinen).
 Falls der angegebene Zug in der gegebenen Spielsituation nicht valide ist,
@@ -338,10 +343,8 @@ im Label eines Knotens zu haben; dann kann mit Hilfe einer Funktion
 
 > toGameStates :: GameState -> [Move] -> [GameState]
 > toGameStates _ [] = []
-> toGameStates _ (Pass:[]) = []
-> toGameStates gs (x:xs) = if isJust ngs then (fromJust ngs):(toGameStates gs xs)
->                          else toGameStates gs xs
->                             where ngs = play x gs
+> toGameStates _ (Pass:_) = []
+> toGameStates gs moves = catMaybes $ map (\m -> play m gs) moves
 
 eine Liste von möglichen Folgesituation zum Aufbau des Baumes generiert werden.
 
