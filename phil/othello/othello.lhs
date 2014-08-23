@@ -373,7 +373,7 @@ Implementieren Sie eine Funktion
 > gameTree :: GameState -> GameTree
 > gameTree gs = Node ( gs , pm gs ) a where
 >           pm g = possibleMoves g
->           a = [Node (gstate,pm gstate) [] | gstate <- (toGameStates gs (pm gs))]
+>           a = [gameTree gstate | gstate <- (toGameStates gs (pm gs))]
 
 die aus |gs| den Baum aller möglichen Folge-GameStates berechnet. 
 
