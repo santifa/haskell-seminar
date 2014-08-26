@@ -105,23 +105,23 @@ Wir verwenden folgende Datentypen
 > type Pos   = (Char,Int)
 > data Board = Bo { unBo :: Pos -> Maybe Color } 
 
- intersperse :: a -> [a] -> [a]
- intersperse x []     = []
- intersperse x [y]    = [y]
- intersperse x (y:ys) = y:x:intersperse x ys
+> intersperse :: a -> [a] -> [a]
+> intersperse x []     = []
+> intersperse x [y]    = [y]
+> intersperse x (y:ys) = y:x:intersperse x ys
 
- intercalate :: [a] -> [[a]] -> [a]
- intercalate xs xss = concat (intersperse xs xss)
+> intercalate :: [a] -> [[a]] -> [a]
+> intercalate xs xss = concat (intersperse xs xss)
 
- instance Show Board where
-  show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
-       ( intercalate "\n-------------------------------\n" (
-         zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
-                    (map (("  "++).show) [8,7..1])))  where 
-       showMC (Just X) = "X"
-       showMC (Just O) = "O"
-       showMC Nothing  = " "
-       bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
+> instance Show Board where
+>  show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
+>       ( intercalate "\n-------------------------------\n" (
+>         zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
+>                    (map (("  "++).show) [8,7..1])))  where 
+>       showMC (Just X) = "X"
+>       showMC (Just O) = "O"
+>       showMC Nothing  = " "
+>       bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
 
 
 
@@ -163,9 +163,9 @@ Definieren Sie Funktionen
 > content pos (Bo b) = b pos
 
 > set :: Color -> Pos -> Board -> Board
-> set color pos (Bo b) = if isJust $ b pos then Bo b else Bo newBo where
+> set color pos (Bo b) = Bo $ if isJust $ b pos then b else newBo where
 >                   -- concat old function to the new one and add a guard
->                   newBo nPos 
+>                   newBo nPos
 >                       | nPos == pos = Just color
 >                       | otherwise = b nPos
 
@@ -228,16 +228,15 @@ Implementieren Sie eine Funktion
 
 > posToFlip :: Pos -> Board -> [Pos]
 >     -- reduce list to flipable enemy positions and concat
-> posToFlip pos (Bo b) = concat $ map (takeWhile (\p -> b p /= b pos)) flipable
+> posToFlip pos (Bo b) = concatMap (takeWhile (\p -> b p /= b pos)) flipable
 >      -- star is list of list in all possible directions
 >   where star = map (filter (pos /=)) [walk pos s| s <- [nw, no, ne, we, ea, sw, so, se]]
 >      -- remove Nothing positions and filter lines where the color doesn't change
->         flipable = filter f $ map (takeWhile (\x -> isJust (b x))) star
+>         flipable = filter f $ map (takeWhile (isJust . b)) star
 >           where f [] = False
 >                 f (x:xs)
->                   | (b x) /= (b pos) = f xs
->                   | (b x) == (b pos) = True
->                   | otherwise = False
+>                   | b x == b pos = True
+>                   | otherwise = f xs
 
 die die Liste der Positionen berechnet, deren Steine zur Vervollständigung
 des Spielzuges umgedreht werden müssen, falls die angegebene Brettsituation
@@ -273,12 +272,17 @@ Spielstein hat.
 Eine Spielsituation wird durch die Angabe einer Brettsituation und des
 Spielers, der am Zug ist, bestimmt. Wir definieren
 
-> data GameState = GS Color Board ----  deriving Show
+> data GameState = GS Color Board  deriving Show
 
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
 
 > data Move = Put Pos | Pass deriving Show
+> instance Eq Move where
+>   Pass == Pass = True
+>   Pass == Put _ = False
+>   Put _ == Pass = False
+>   Put x == Put y = x == y
 
 Definieren Sie eine Funktion
 
@@ -299,7 +303,7 @@ Definieren Sie eine Funktion
 > valid :: Pos -> Color -> Board -> Bool
 >   -- checks wether a position is valid or not
 >   -- first: no content; second: at least one flip; third: in board range
-> valid pos c board = (content pos board) == Nothing &&
+> valid pos c board = isNothing (content pos board) &&
 >   not (null (posToFlip pos nBoard)) && inbound pos
 >     where nBoard = set c pos board
 >           inbound (x, y) = (x <= 'h' || x >= 'a') && (y < 9 || y > 0)
@@ -360,11 +364,9 @@ Implementieren Sie eine Funktion
 < gameTree :: GameState -> GameTree
 
 > gameTree :: GameState -> GameTree
-> gameTree gs = unfoldRT gs
-
-> unfoldRT :: GameState -> GameTree
-> unfoldRT seed = Node (seed, possibleMoves seed) leafs
->   where leafs = map (unfoldRT) (toGameStates seed (possibleMoves seed))
+>   -- create endless GameTree directly and not with generic unfoldRT
+> gameTree gs = Node (gs, possibleMoves gs) leafs
+>   where leafs = map gameTree $ toGameStates gs $ possibleMoves gs
 
 die aus |gs| den Baum aller möglichen Folge-GameStates berechnet.
 
@@ -390,11 +392,12 @@ Implementieren Sie eine Funktion
 > winner :: GameState -> Maybe Color
 > winner (GS c (Bo b))
 >   | not $ null $ pm = Nothing
->   | o < x = Just X
->   | o >= x = Just O
+>   | null (dropWhile (Pass ==) pm) && o < x = Just X
+>   | null (dropWhile (Pass ==) pm) && o >= x = Just O
 >   where pm = possibleMoves (GS c (Bo b)) ++ possibleMoves (GS (rev c) (Bo b))
 >         o = length [b (i, y) | i <- ['a'..'h'], y <- [1..8], (b (i,y)) == Just O]
 >         x = length [b (i, y) | i <- ['a'..'h'], y <- [1..8], (b (i,y)) == Just X]
+> winner (GS _ (Bo _)) = Nothing
 
 die |Just winColor| liefert, falls in der Brettsituation |b| des Arguments
 |GS c b| die Partie beendet ist und der Spieler |winColor| gewinnt. Falls
@@ -514,25 +517,12 @@ Implementieren Sie schliesslich eine Funktion
 < bestMoves :: Valuation -> GameTree -> [Move]
 
 > bestMoves :: Valuation -> GameTree -> [Move]
+> bestMoves _ (Node (_, (Pass:_)) _) = [Pass]
 > bestMoves _ (Node _ []) = []
-> bestMoves val (Node (_, moves) ts) = bmoves
+> bestMoves val (Node (_, moves) ts) = [moves!! indice]
 >     where nmax = map (negaMax val) ts
 >           indice = fromJust $ findIndex ((maximum nmax) ==) nmax
->           bmove = moves !! indice
->           bmoves = bmove:(bestMoves val (ts!!indice))
 
- bestMoves val (Node a []) = []
- bestMoves val (Node (gs, moves) ts) = getMoves (getInd gs moves val) moves
-   where f (Node (gs, moves) ts) = getMoves (getInd gs moves val) moves
-
- getMoves [] moves = []
- getMoves (x:xs) moves = (moves!!x):(getMoves xs moves)
-
- getInd :: GameState -> [Move] -> Valuation -> [Int]
- getInd gs moves val = elemIndices (maximum mlist) mlist
-   where mlist = map val (toGameStates gs moves)
-
-sodass |bestMoves val (Node ((GS c b),ms) ts)| die für Spieler |c| in der
 Brettsituation |b| günstigsten Züge aus |ms| auswählt. Auch hier dürfen Sie davon
 ausgehen, dass der gegebene Baum durch |pruneRT n (gameTree (GS c b))| entstanden
 ist und daher |ms| genau die Liste der in Situation |(GS c b)| möglichen Züge und
