@@ -128,24 +128,24 @@ Definieren Sie
 >                           board ('e', 4) = Just O
 >                           board _ = Nothing
 
-<> intersperse :: a -> [a] -> [a]
-<> intersperse x []     = []
-<> intersperse x [y]    = [y]
-<> intersperse x (y:ys) = y:x:intersperse x ys
-<>
-<> intercalate :: [a] -> [[a]] -> [a]
-<> intercalate xs xss = concat (intersperse xs xss)
+> intersperse :: a -> [a] -> [a]
+> intersperse x []     = []
+> intersperse x [y]    = [y]
+> intersperse x (y:ys) = y:x:intersperse x ys
+>
+> intercalate :: [a] -> [[a]] -> [a]
+> intercalate xs xss = concat (intersperse xs xss)
 
 
-<> instance Show Board where
-<>   show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
-<>         ( intercalate "\n-------------------------------\n" (
-<>         zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
-<>                      (map (("  "++).show) [8,7..1])))  where 
-<>         showMC (Just X) = "X"
-<>         showMC (Just O) = "O"
-<>         showMC Nothing  = " "
-<>         bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
+> instance Show Board where
+>   show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
+>         ( intercalate "\n-------------------------------\n" (
+>         zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
+>                      (map (("  "++).show) [8,7..1])))  where 
+>         showMC (Just X) = "X"
+>         showMC (Just O) = "O"
+>         showMC Nothing  = " "
+>         bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
 
 wo |emptyBoard| ein leeres Spielfeld und |startBoard| die oben angegebene
 Startstellung repräsentiert.
@@ -277,13 +277,19 @@ soll z.B. |posToFlip ('c',4) b| (eine beliebige Umordnung von)
 
 Definieren Sie eine Funktion
 
-> flipAll :: [Pos] -> Board -> Board
-> flipAll [] board = board
-> flipAll (x:xs) (Bo board) = (Bo b) where
->       b pos 
->           | pos == x = if (Just X == board x) then Just O else Just X
->           | otherwise = board pos
+<> flipAll :: [Pos] -> Board -> Board
+<> flipAll [] board = board
+<> flipAll (x:xs) (Bo board) = (Bo b) where
+<>       b pos 
+<>           | pos == x = if (Just X == board x) then Just O else Just X
+<>           | otherwise = board pos
 
+> flipAll :: [Pos] -> Board -> Board
+> flipAll [] (Bo board) = Bo board
+> flipAll (p:ps) (Bo board) = flipAll ps (Bo nB)
+>   where nB pos
+>           | pos == p = Just ( switchColor ( fromJust ( board p ) ) )
+>           | otherwise = board pos
 
 die die Steine an allen angegebenen Positionen dreht. Sie dürfen annehmen,
 dass das gegebene Brett tatsächlich an allen angegebenen Positionen einen 
@@ -294,9 +300,9 @@ Spielstein hat.
 Eine Spielsituation wird durch die Angabe einer Brettsituation und des
 Spielers, der am Zug ist, bestimmt. Wir definieren
 
-<> data GameState = GS Color Board deriving Show
+> data GameState = GS Color Board deriving Show
 
-> data GameState = GS Color Board 
+<> data GameState = GS Color Board 
 
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
@@ -319,9 +325,6 @@ Definieren Sie eine Funktion
 >                   board' = flipAll (posToFlip pos b) b where
 >                               b = set color pos (Bo board)
 
-> extractMaybe :: Maybe a -> a
-> extractMaybe (Just a) = a
-
 zum Ausführen eines Zuges (mit allen nötigen Drehungen von Steinen). 
 Falls der angegebene Zug in der gegebenen Spielsituation nicht valide ist,
 soll |play| das Ergebnis |Nothing| liefern. Valide ist ein |Put p|, falls
@@ -336,8 +339,10 @@ am Zug ist, eingeschlossen (und dann also gedreht) wird.
 wechselt die farbe
 
 > switchColor :: Color -> Color
-> switchColor X = O
-> switchColor O = X
+> switchColor c
+>   | c == X = O
+>   | c == O = X
+>   | otherwise = O
 
 
 |Pass| ist nur valide, wenn es keine Position |p| gibt, für die |Put p|
