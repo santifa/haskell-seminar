@@ -128,24 +128,24 @@ Definieren Sie
 >                           board ('e', 4) = Just O
 >                           board _ = Nothing
 
-> intersperse :: a -> [a] -> [a]
-> intersperse x []     = []
-> intersperse x [y]    = [y]
-> intersperse x (y:ys) = y:x:intersperse x ys
->
-> intercalate :: [a] -> [[a]] -> [a]
-> intercalate xs xss = concat (intersperse xs xss)
-
-
-> instance Show Board where
->   show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
->         ( intercalate "\n-------------------------------\n" (
->         zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
->                      (map (("  "++).show) [8,7..1])))  where 
->         showMC (Just X) = "X"
->         showMC (Just O) = "O"
->         showMC Nothing  = " "
->         bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
+<> intersperse :: a -> [a] -> [a]
+<> intersperse x []     = []
+<> intersperse x [y]    = [y]
+<> intersperse x (y:ys) = y:x:intersperse x ys
+<>
+<> intercalate :: [a] -> [[a]] -> [a]
+<> intercalate xs xss = concat (intersperse xs xss)
+<
+<
+<> instance Show Board where
+<>   show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
+<>         ( intercalate "\n-------------------------------\n" (
+<>         zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
+<>                      (map (("  "++).show) [8,7..1])))  where 
+<>         showMC (Just X) = "X"
+<>         showMC (Just O) = "O"
+<>         showMC Nothing  = " "
+<>         bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
 
 wo |emptyBoard| ein leeres Spielfeld und |startBoard| die oben angegebene
 Startstellung repräsentiert.
@@ -203,11 +203,6 @@ Definieren Sie eine Funktion
 >   | x > 'h' || x < 'a' || y > 8 || y < 1 = []
 >   | otherwise = (x, y):walk (dir (x, y)) dir
 
-< walk ( '`', y ) _     = []
-< walk ( x, 0 ) _       = []
-< walk ( 'i', y) _      = []
-< walk ( x, 9 ) _       = []
-< walk p dir            = p:walk (dir p) dir 
 
 
 walk' führt ein walk aus und schneidet das erste Element ab
@@ -229,18 +224,9 @@ sein.
 Implementieren Sie eine Funktion
 
 > posToFlip :: Pos -> Board -> [Pos]
-> posToFlip pos (Bo b) = concatMap (takeWhile (\p -> b p /= b pos)) flipable
->   where star = map (filter (pos /=)) [walk pos s| s <- [nw, no, ne, we, ea, sw, so, se]]
->         flipable = filter f $ map (takeWhile (isJust . b)) star
->           where f [] = False
->                 f (x:xs)
->                   | b x == b pos = True
->                   | otherwise = f xs
-
-<> posToFlip :: Pos -> Board -> [Pos]
-<> posToFlip pos (Bo board) = concat $ map (getFlipable (board pos) (Bo board)) $ filter test l where
-<>                               l = allWalk pos
-<>                               test = isFlipableWalk (board pos) (Bo board)
+> posToFlip pos (Bo board) = concat $ map (getFlipable (board pos) (Bo board)) $ filter test l where
+>                               l = allWalk pos
+>                               test = isFlipableWalk (board pos) (Bo board)
 
 
 gibt die positionen aus die umgedreht werden können
@@ -277,13 +263,6 @@ soll z.B. |posToFlip ('c',4) b| (eine beliebige Umordnung von)
 
 Definieren Sie eine Funktion
 
-<> flipAll :: [Pos] -> Board -> Board
-<> flipAll [] board = board
-<> flipAll (x:xs) (Bo board) = (Bo b) where
-<>       b pos 
-<>           | pos == x = if (Just X == board x) then Just O else Just X
-<>           | otherwise = board pos
-
 > flipAll :: [Pos] -> Board -> Board
 > flipAll [] (Bo board) = Bo board
 > flipAll (p:ps) (Bo board) = flipAll ps (Bo nB)
@@ -300,9 +279,9 @@ Spielstein hat.
 Eine Spielsituation wird durch die Angabe einer Brettsituation und des
 Spielers, der am Zug ist, bestimmt. Wir definieren
 
-> data GameState = GS Color Board deriving Show
+<> data GameState = GS Color Board deriving Show
 
-<> data GameState = GS Color Board 
+> data GameState = GS Color Board 
 
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
