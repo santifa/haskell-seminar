@@ -26,6 +26,7 @@
 
 > module Othello where
 > import Data.Maybe
+> import Data.List (sort)
 
 \section{Einführung}
 
@@ -228,13 +229,27 @@ sein.
 Implementieren Sie eine Funktion
 
 > posToFlip :: Pos -> Board -> [Pos]
-> posToFlip pos (Bo board) = concat $ map (getFlipable (board pos)) $ filter test l where
->                               l = allWalk pos
->                               test = isFlipableWalk (board pos) (Bo board)
->                               getFlipable color [] = []
->                               getFlipable color (x:xs)
->                                   | board x == color = []
->                                   | otherwise = x:(getFlipable color xs)
+> posToFlip pos (Bo b) = concatMap (takeWhile (\p -> b p /= b pos)) flipable
+>   where star = map (filter (pos /=)) [walk pos s| s <- [nw, no, ne, we, ea, sw, so, se]]
+>         flipable = filter f $ map (takeWhile (isJust . b)) star
+>           where f [] = False
+>                 f (x:xs)
+>                   | b x == b pos = True
+>                   | otherwise = f xs
+
+<> posToFlip :: Pos -> Board -> [Pos]
+<> posToFlip pos (Bo board) = concat $ map (getFlipable (board pos) (Bo board)) $ filter test l where
+<>                               l = allWalk pos
+<>                               test = isFlipableWalk (board pos) (Bo board)
+
+
+gibt die positionen aus die umgedreht werden können
+
+> getFlipable :: Maybe Color -> Board -> [Pos] -> [Pos]
+> getFlipable _ _ [] = []
+> getFlipable color (Bo board) (x:xs)
+>     | board x == color = []
+>     | otherwise = x:(getFlipable color (Bo board) xs)
 
 
 gibt alle wege aus (alle himmelsrichtungen)
@@ -262,13 +277,19 @@ soll z.B. |posToFlip ('c',4) b| (eine beliebige Umordnung von)
 
 Definieren Sie eine Funktion
 
-> flipAll :: [Pos] -> Board -> Board
-> flipAll [] board = board
-> flipAll (x:xs) (Bo board) = (Bo b) where
->       b pos 
->           | pos == x = if (Just X == board x) then Just O else Just X
->           | otherwise = board pos
+<> flipAll :: [Pos] -> Board -> Board
+<> flipAll [] board = board
+<> flipAll (x:xs) (Bo board) = (Bo b) where
+<>       b pos 
+<>           | pos == x = if (Just X == board x) then Just O else Just X
+<>           | otherwise = board pos
 
+> flipAll :: [Pos] -> Board -> Board
+> flipAll [] (Bo board) = Bo board
+> flipAll (p:ps) (Bo board) = flipAll ps (Bo nB)
+>   where nB pos
+>           | pos == p = Just ( switchColor ( fromJust ( board p ) ) )
+>           | otherwise = board pos
 
 die die Steine an allen angegebenen Positionen dreht. Sie dürfen annehmen,
 dass das gegebene Brett tatsächlich an allen angegebenen Positionen einen 
@@ -280,6 +301,8 @@ Eine Spielsituation wird durch die Angabe einer Brettsituation und des
 Spielers, der am Zug ist, bestimmt. Wir definieren
 
 > data GameState = GS Color Board deriving Show
+
+<> data GameState = GS Color Board 
 
 Ein Zug besteht entweder im Setzen eines Steins an eine angegebene Position
 oder im ''Passen''.
@@ -302,7 +325,6 @@ Definieren Sie eine Funktion
 >                   board' = flipAll (posToFlip pos b) b where
 >                               b = set color pos (Bo board)
 
-
 zum Ausführen eines Zuges (mit allen nötigen Drehungen von Steinen). 
 Falls der angegebene Zug in der gegebenen Spielsituation nicht valide ist,
 soll |play| das Ergebnis |Nothing| liefern. Valide ist ein |Put p|, falls
@@ -317,8 +339,10 @@ am Zug ist, eingeschlossen (und dann also gedreht) wird.
 wechselt die farbe
 
 > switchColor :: Color -> Color
-> switchColor X = O
-> switchColor O = X
+> switchColor c
+>   | c == X = O
+>   | c == O = X
+>   | otherwise = O
 
 
 |Pass| ist nur valide, wenn es keine Position |p| gibt, für die |Put p|
@@ -485,7 +509,10 @@ beide Spieler gleich behandelt werden können (vgl. Wikipedia)!
 
 Implementieren Sie eine Bewertungsfunktion
 
-< valOthello :: Valuation
+> valOthello :: Valuation
+> valOthello (GS c (Bo b)) = (2 * (fromIntegral m) / (fromIntegral t)) - 1 where 
+>           m = length [b (x,y) | x <- ['a'..'h'], y <- [1..8], (b (x,y)) == Just c]
+>           t = length [b (x,y) | x <- ['a'..'h'], y <- [1..8], isJust (b (x,y))]
 
 die in obigem Sinne ''vernünftig'' ist und für Spielsituationen |GS c b|, in denen
 es noch keinen Gewinner gibt, einfach | (2*m/tot) - 1| zurückgibt, wobei |tot| die
@@ -495,7 +522,13 @@ konvertieren.
 
 Implementieren Sie eine Funktion
 
-< negaMax :: Valuation -> GameTree -> Double
+> negaMax :: Valuation -> GameTree -> Double
+> negaMax val (Node (gs,_) []) = val gs
+> negaMax val (Node (gs,_) xs) 
+>   | abs (val gs) == 1 = val gs
+>   | otherwise = maximum ( map (negaMax val) xs )
+
+
 
 sodass für eine ''vernünftige'' Bewertungsfunktion |val| und unter der 
 Voraussetzung, dass beide Spieler bestmöglich spielen, 
@@ -509,7 +542,15 @@ im Falle |abs (val gs) == 1| keine Rekusion in die Teilbäume |ts| nötig ist.
 
 Implementieren Sie schliesslich eine Funktion
 
-< bestMoves :: Valuation -> GameTree -> [Move]
+> bestMoves :: Valuation -> GameTree -> [Move]
+> nestMoves _ (Node (_,(Pass:_)) _) = [Pass]
+> bestMoves _ (Node _ []) = []
+> bestMoves val (Node (_, moves) xs) = [moves!! (findInd (maximum m) m)]
+>     where m = map (negaMax val) xs
+>           findInd value (h:t)
+>               | value == h = 0
+>               | otherwise  = 1 + (findInd value t)
+
 
 sodass |bestMoves val (Node ((GS c b),ms) ts)| die für Spieler |c| in der
 Brettsituation |b| günstigsten Züge aus |ms| auswählt. Auch hier dürfen Sie davon 
