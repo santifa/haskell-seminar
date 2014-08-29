@@ -1,7 +1,7 @@
 module OthelloCLI where
 import System.Random (randomRIO)
-import Othello (startBoard, GameState (GS), Color (X,O), 
-  Move (Pass, Put), Board (Bo), winner, bestMoves, valOthello, 
+import Othello (startBoard, GameState (GS), Color (X,O),
+  Move (Pass, Put), Board (Bo), winner, bestMoves, valOthello,
   pruneRT, gameTree, play)
 
 
@@ -10,7 +10,7 @@ data PlayerType = Mensch | Maschine Int deriving (Read,Eq)
 
 instance Show PlayerType where
   show Mensch       = "Mensch"
-  show (Maschine n) = "Maschine Tiefe " ++ (show n) 
+  show (Maschine n) = "Maschine Tiefe " ++ show n
 
 -- to avoid WinHugs problems:
 
@@ -24,32 +24,32 @@ intercalate xs xss = concat (intersperse xs xss)
 
 
 instance Show Board where
-  show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
-        ( intercalate "\n-------------------------------\n" (
-          zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
-                     (map (("  "++).show) [8,7..1])))  where 
+  show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++
+         intercalate "\n-------------------------------\n" (
+          zipWith (++) (map ((" "++). intercalate " | " . (map showMC)) bss)
+                     (map (("  "++).show) [8,7..1]))  where
         showMC (Just X) = "X"
         showMC (Just O) = "O"
         showMC Nothing  = " "
-        bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
+        bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ]
 
 
 othello :: PlayerType -> PlayerType -> IO ()
 othello = othello' (GS X startBoard) "" where
   othello' :: GameState -> Message -> PlayerType -> PlayerType -> IO ()
   othello' gs@(GS c b) mess ptthis ptother = do
-    putStrLn (show b)
+    print (show b)
     putStrLn mess
     case (winner gs) of
       Just c -> putStrLn $ (show c) ++ " gewinnt."
       Nothing -> case ptthis of
         Mensch -> do
-          putStrLn $ 
+          putStrLn $
             "Bitte Zug für " ++ show c ++ " angeben! \n" ++
             "Formatbeispiel: ''a5'' für Setzen an Position a5\n" ++
             "                ''p''  für Passen"
           answer <- getLine
-          let 
+          let
             maybeMove = case answer of
               []      -> Nothing
               ('p':_) -> Just Pass
@@ -60,15 +60,15 @@ othello = othello' (GS X startBoard) "" where
               Nothing -> again "Konnte die Eingabe nicht parsen...:-("
               Just mo -> doMove mo
         Maschine n -> do
-          putStrLn $ 
-            "Spieler " ++ show c ++ " (" ++ show ptthis ++ 
+          putStrLn $
+            "Spieler " ++ show c ++ " (" ++ show ptthis ++
             ") berechnet einen Zug..."
-          let 
+          let
             best = bestMoves valOthello $ pruneRT n $ gameTree gs
             in do
               maybeMove <- case best of
                 [] -> return Nothing
-                _  -> randomRIO (0, length best - 1) 
+                _  -> randomRIO (0, length best - 1)
                         >>= return . Just . (best !!)
               case maybeMove of
                 Nothing -> putStrLn $
@@ -80,4 +80,4 @@ othello = othello' (GS X startBoard) "" where
         doMove mo = case play mo gs of
           Nothing  -> again $ show mo ++ " ist kein gültiger Zug!"
           Just gs' -> othello' gs' "" ptother ptthis
-  
+

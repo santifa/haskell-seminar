@@ -26,7 +26,7 @@
 
 > module Othello where
 > import Data.Maybe
-> import Data.List (unfoldr, findIndex)
+> import Data.List (unfoldr, findIndices)
 
 \section{Einführung}
 
@@ -103,25 +103,25 @@ Wir verwenden folgende Datentypen
 
 > data Color = X | O deriving (Show,Eq)
 > type Pos   = (Char,Int)
-> data Board = Bo { unBo :: Pos -> Maybe Color } 
+> data Board = Bo { unBo :: Pos -> Maybe Color }
 
 > intersperse :: a -> [a] -> [a]
-> intersperse x []     = []
-> intersperse x [y]    = [y]
+> intersperse _ []     = []
+> intersperse _ [y]    = [y]
 > intersperse x (y:ys) = y:x:intersperse x ys
 
 > intercalate :: [a] -> [[a]] -> [a]
 > intercalate xs xss = concat (intersperse xs xss)
 
 > instance Show Board where
->  show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++  
+>  show (Bo f) =     "\n a   b   c   d   e   f   g   h\n" ++
 >       ( intercalate "\n-------------------------------\n" (
->         zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss) 
->                    (map (("  "++).show) [8,7..1])))  where 
+>         zipWith (++) (map ((" "++).(intercalate " | ") . (map showMC)) bss)
+>                    (map (("  "++) . show) [8,7..1])))  where
 >       showMC (Just X) = "X"
 >       showMC (Just O) = "O"
 >       showMC Nothing  = " "
->       bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ] 
+>       bss = [ [f (x,y) | x <- ['a'..'h'] ] | y <- [8,7..1] ]
 
 
 
@@ -258,7 +258,7 @@ Definieren Sie eine Funktion
 
 > rev :: Color -> Color
 >   -- reverse a color
-> rev color 
+> rev color
 >       | color == X = O
 >       | color == O = X
 >       | otherwise = O
@@ -391,13 +391,12 @@ Implementieren Sie eine Funktion
 
 > winner :: GameState -> Maybe Color
 > winner (GS c (Bo b))
->   | not $ null $ pm = Nothing
 >   | null (dropWhile (Pass ==) pm) && o < x = Just X
 >   | null (dropWhile (Pass ==) pm) && o >= x = Just O
+>   | otherwise = Nothing
 >   where pm = possibleMoves (GS c (Bo b)) ++ possibleMoves (GS (rev c) (Bo b))
 >         o = length [b (i, y) | i <- ['a'..'h'], y <- [1..8], (b (i,y)) == Just O]
 >         x = length [b (i, y) | i <- ['a'..'h'], y <- [1..8], (b (i,y)) == Just X]
-> winner (GS _ (Bo _)) = Nothing
 
 die |Just winColor| liefert, falls in der Brettsituation |b| des Arguments
 |GS c b| die Partie beendet ist und der Spieler |winColor| gewinnt. Falls
@@ -499,9 +498,6 @@ Implementieren Sie eine Funktion
 >   | abs (val (GS c board)) == 1 = val (GS c board)
 >   | otherwise = maximum $ map (negaMax val) ts
 
- negaMax val (Node (gs, moves) ts) = maximum  map val xs
-   where xs = map ((Node (gs, ms) xss) -> gs) ts
-
 sodass für eine ''vernünftige'' Bewertungsfunktion |val| und unter der
 Voraussetzung, dass beide Spieler bestmöglich spielen,
 |negaMax val gt@(Node ((GS c b),ms) ts)| den für den Spieler |c| (bzgl. |val|)
@@ -518,10 +514,11 @@ Implementieren Sie schliesslich eine Funktion
 
 > bestMoves :: Valuation -> GameTree -> [Move]
 > bestMoves _ (Node (_, (Pass:_)) _) = [Pass]
-> bestMoves _ (Node _ []) = []
-> bestMoves val (Node (_, moves) ts) = [moves!! indice]
+> bestMoves _ (Node _ []) = [Pass]
+> bestMoves val (Node (_, moves) ts) = bmoves
 >     where nmax = map (negaMax val) ts
->           indice = fromJust $ findIndex ((maximum nmax) ==) nmax
+>           indices = findIndices ((maximum nmax) ==) nmax
+>           bmoves = map (moves !!) indices
 
 Brettsituation |b| günstigsten Züge aus |ms| auswählt. Auch hier dürfen Sie davon
 ausgehen, dass der gegebene Baum durch |pruneRT n (gameTree (GS c b))| entstanden
